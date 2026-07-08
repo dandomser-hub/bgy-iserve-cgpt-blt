@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Star, FileText, Wallet, AlertTriangle, Users, Eye, Search, MapPin, Lock, User, ChevronRight } from 'lucide-react';
 import { useRole } from '@/app/providers/RoleProvider';
-import { ROLES, ROLE_HOME, USERNAME_TO_ROLE, APP_NAME, APP_TAGLINE } from '@/utils/constants';
+import { ROLES, ROLE_HOME, APP_NAME, APP_TAGLINE } from '@/utils/constants';
 import type { RoleId } from '@/types/auth';
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
@@ -27,8 +27,6 @@ const ROLE_BG: Record<string, string> = {
   read_only_auditor: 'from-slate-400 to-slate-600',
 };
 
-const DEMO_PASSWORD = 'demo1234';
-
 export function RoleSelectorPage() {
   const { setRole } = useRole();
   const navigate = useNavigate();
@@ -39,17 +37,12 @@ export function RoleSelectorPage() {
   function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const roleId = USERNAME_TO_ROLE[username.trim().toLowerCase()];
-    if (!roleId) {
-      setError('Unrecognized username. See the demo credentials below.');
+    if (username.trim().toLowerCase() !== 'admin' || password !== 'demo1234') {
+      setError('Invalid username or password.');
       return;
     }
-    if (password !== DEMO_PASSWORD) {
-      setError('Incorrect password. Password is demo1234 for all accounts.');
-      return;
-    }
-    setRole(roleId);
-    navigate(ROLE_HOME[roleId]);
+    setRole('system_admin');
+    navigate(ROLE_HOME['system_admin']);
   }
 
   function handleQuickSelect(roleId: RoleId) {
@@ -119,23 +112,6 @@ export function RoleSelectorPage() {
             <ChevronRight size={14} />
           </button>
 
-          {/* Credential hint table */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
-            <p className="text-amber-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
-              Demo credentials — password: <span className="font-mono">demo1234</span>
-            </p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-              {Object.entries(USERNAME_TO_ROLE).map(([user, role]) => {
-                const roleObj = ROLES.find(r => r.id === role);
-                return (
-                  <p key={user} className="text-amber-800 text-[11px]">
-                    <span className="font-mono font-semibold">{user}</span>
-                    <span className="text-amber-600"> — {roleObj?.shortLabel}</span>
-                  </p>
-                );
-              })}
-            </div>
-          </div>
         </form>
       </div>
 
