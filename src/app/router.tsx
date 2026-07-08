@@ -1,5 +1,13 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { AppShell } from '@/layouts/AppShell';
+import { useRole } from '@/app/providers/RoleProvider';
+import { ROLE_HOME } from '@/utils/constants';
+
+function RoleLandingRedirect() {
+  const { roleId } = useRole();
+  if (!roleId) return <Navigate to="/login-demo" replace />;
+  return <Navigate to={ROLE_HOME[roleId]} replace />;
+}
 
 // Auth
 import { RoleSelectorPage } from '@/modules/auth/RoleSelectorPage';
@@ -79,7 +87,7 @@ export const router = createBrowserRouter([
     path: '/',
     element: <AppShell />,
     children: [
-      { index: true, element: <Navigate to="/dashboard" replace /> },
+      { index: true, element: <RoleLandingRedirect /> },
       { path: 'dashboard', element: <ExecutiveDashboardPage /> },
 
       // Residents

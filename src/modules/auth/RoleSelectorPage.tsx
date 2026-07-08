@@ -1,19 +1,19 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Star, FileText, Wallet, AlertTriangle, Users, Eye, Search } from 'lucide-react';
+import { Shield, Star, FileText, Wallet, AlertTriangle, Users, Eye, Search, Building2, Lock, User, ChevronRight } from 'lucide-react';
 import { useRole } from '@/app/providers/RoleProvider';
-import { ROLES } from '@/utils/constants';
-import { APP_NAME, APP_TAGLINE } from '@/utils/constants';
+import { ROLES, ROLE_HOME, USERNAME_TO_ROLE, APP_NAME, APP_TAGLINE } from '@/utils/constants';
 import type { RoleId } from '@/types/auth';
 
 const ROLE_ICONS: Record<string, React.ReactNode> = {
-  system_admin: <Shield size={22} />,
-  punong_barangay: <Star size={22} />,
-  barangay_secretary: <FileText size={22} />,
-  barangay_treasurer: <Wallet size={22} />,
-  drrm_focal: <AlertTriangle size={22} />,
-  gad_focal: <Users size={22} />,
-  municipal_reviewer: <Eye size={22} />,
-  read_only_auditor: <Search size={22} />,
+  system_admin: <Shield size={15} />,
+  punong_barangay: <Star size={15} />,
+  barangay_secretary: <FileText size={15} />,
+  barangay_treasurer: <Wallet size={15} />,
+  drrm_focal: <AlertTriangle size={15} />,
+  gad_focal: <Users size={15} />,
+  municipal_reviewer: <Eye size={15} />,
+  read_only_auditor: <Search size={15} />,
 };
 
 const ROLE_BG: Record<string, string> = {
@@ -27,64 +27,149 @@ const ROLE_BG: Record<string, string> = {
   read_only_auditor: 'from-slate-400 to-slate-600',
 };
 
+const DEMO_PASSWORD = 'demo1234';
+
 export function RoleSelectorPage() {
   const { setRole } = useRole();
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  function handleSelect(roleId: RoleId) {
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    const roleId = USERNAME_TO_ROLE[username.trim().toLowerCase()];
+    if (!roleId) {
+      setError('Unrecognized username. See the demo credentials below.');
+      return;
+    }
+    if (password !== DEMO_PASSWORD) {
+      setError('Incorrect password. Password is demo1234 for all accounts.');
+      return;
+    }
     setRole(roleId);
-    navigate('/dashboard');
+    navigate(ROLE_HOME[roleId]);
+  }
+
+  function handleQuickSelect(roleId: RoleId) {
+    setRole(roleId);
+    navigate(ROLE_HOME[roleId]);
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-forest-dark via-forest to-ocean flex flex-col">
-      {/* Header */}
-      <div className="text-center pt-12 pb-8 px-4">
-        <div className="inline-flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center shadow-xl">
-            <span className="text-forest font-black text-lg">iS</span>
+    <div className="min-h-screen bg-gradient-to-br from-forest-dark via-forest to-ocean flex flex-col items-center justify-start py-10 px-4">
+
+      {/* ── Login Card ── */}
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+        {/* Card header strip */}
+        <div className="bg-gradient-to-r from-forest-dark to-forest px-6 py-5 flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Building2 size={20} className="text-white" />
           </div>
-          <div className="text-left">
-            <h1 className="text-2xl font-bold text-white">{APP_NAME}</h1>
-            <p className="text-green-200 text-xs">Prototype Demo</p>
+          <div>
+            <h1 className="text-white font-bold text-base leading-tight">{APP_NAME}</h1>
+            <p className="text-green-200 text-xs leading-tight">Barangay Management System</p>
           </div>
         </div>
-        <p className="text-green-100 text-sm max-w-lg mx-auto opacity-90">{APP_TAGLINE}</p>
-        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-amber-400/20 border border-amber-400/30 rounded-full">
-          <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse" />
-          <span className="text-amber-200 text-xs font-medium">Demo Mode — Select a role to explore</span>
-        </div>
+
+        {/* Form */}
+        <form onSubmit={handleLogin} className="px-6 py-6 space-y-4">
+          <div>
+            <p className="text-gray-800 font-semibold text-sm">Sign in to your account</p>
+            <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{APP_TAGLINE}</p>
+          </div>
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-3">
+            <div className="relative">
+              <User size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="text"
+                value={username}
+                onChange={e => { setUsername(e.target.value); setError(''); }}
+                placeholder="Username"
+                autoComplete="username"
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-colors placeholder:text-gray-400 text-gray-800"
+              />
+            </div>
+            <div className="relative">
+              <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              <input
+                type="password"
+                value={password}
+                onChange={e => { setPassword(e.target.value); setError(''); }}
+                placeholder="Password"
+                autoComplete="current-password"
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest/30 focus:border-forest transition-colors placeholder:text-gray-400 text-gray-800"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            className="w-full bg-gradient-to-r from-forest to-forest-dark text-white font-semibold text-sm py-2.5 rounded-lg hover:opacity-90 active:opacity-80 transition-opacity flex items-center justify-center gap-2"
+          >
+            Sign In
+            <ChevronRight size={14} />
+          </button>
+
+          {/* Credential hint table */}
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+            <p className="text-amber-700 text-[10px] font-bold uppercase tracking-wide mb-1.5">
+              Demo credentials — password: <span className="font-mono">demo1234</span>
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+              {Object.entries(USERNAME_TO_ROLE).map(([user, role]) => {
+                const roleObj = ROLES.find(r => r.id === role);
+                return (
+                  <p key={user} className="text-amber-800 text-[11px]">
+                    <span className="font-mono font-semibold">{user}</span>
+                    <span className="text-amber-600"> — {roleObj?.shortLabel}</span>
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+        </form>
       </div>
 
-      {/* Role grid */}
-      <div className="flex-1 px-4 pb-12 max-w-5xl mx-auto w-full">
-        <h2 className="text-white/60 text-xs font-semibold uppercase tracking-widest text-center mb-6">Choose your demo role</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* ── Quick Demo Role Picker ── */}
+      <div className="w-full max-w-3xl mt-8">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1 h-px bg-white/20" />
+          <p className="text-white/60 text-[11px] font-semibold uppercase tracking-widest whitespace-nowrap">
+            Or jump in as a demo role
+          </p>
+          <div className="flex-1 h-px bg-white/20" />
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {ROLES.map(role => (
             <button
               key={role.id}
-              onClick={() => handleSelect(role.id as RoleId)}
-              className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 hover:border-white/40 rounded-2xl p-5 text-left transition-all duration-200 hover:scale-[1.02] hover:shadow-xl"
+              onClick={() => handleQuickSelect(role.id as RoleId)}
+              className="group bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 hover:border-white/40 rounded-xl p-3 text-left transition-all duration-200 hover:scale-[1.02] hover:shadow-lg flex items-center gap-2.5"
             >
-              <div className={`w-11 h-11 bg-gradient-to-br ${ROLE_BG[role.id]} rounded-xl flex items-center justify-center text-white mb-3 shadow-lg`}>
+              <div className={`w-7 h-7 bg-gradient-to-br ${ROLE_BG[role.id]} rounded-lg flex items-center justify-center text-white flex-shrink-0 shadow-md`}>
                 {ROLE_ICONS[role.id]}
               </div>
-              <h3 className="text-white font-semibold text-sm mb-1">{role.label}</h3>
-              <p className="text-green-200/70 text-xs leading-relaxed">{role.description}</p>
-              <div className="mt-3 flex items-center gap-1.5 text-green-300 text-xs font-medium group-hover:gap-2.5 transition-all">
-                <span>Select role</span>
-                <span>→</span>
+              <div className="min-w-0">
+                <p className="text-white font-medium text-xs leading-tight truncate">{role.shortLabel}</p>
+                <p className="text-green-300/70 text-[10px] group-hover:text-green-200 transition-colors">Select →</p>
               </div>
             </button>
           ))}
         </div>
 
-        {/* Disclaimer */}
-        <div className="mt-8 text-center">
-          <p className="text-green-300/60 text-xs max-w-2xl mx-auto">
-            This is a <strong className="text-green-300/80">prototype demo only</strong>. No real authentication, real resident data, real payments, or sensitive records are used. All data is fictional.
-          </p>
-        </div>
+        <p className="text-green-300/50 text-[11px] text-center mt-5 max-w-xl mx-auto leading-relaxed">
+          This is a <strong className="text-green-300/70">prototype demo only</strong>. No real authentication, resident data, payments, or sensitive records are used. All data is fictional.
+        </p>
       </div>
     </div>
   );

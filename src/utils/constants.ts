@@ -1,4 +1,4 @@
-import type { Role } from '@/types/auth';
+import type { Role, RoleId } from '@/types/auth';
 
 export const ROLES: Role[] = [
   { id: 'system_admin', label: 'System Administrator', shortLabel: 'Sys Admin', description: 'Full system administration, user/role management, audit, backup and sync monitoring.', color: 'bg-slate-700', icon: 'Shield' },
@@ -22,3 +22,25 @@ export const DOCUMENT_STATUS_FLOW = [
 
 export const APP_NAME = 'Barangay iSERVE';
 export const APP_TAGLINE = 'Integrated System for Efficient, Resilient, Verified, and Empowered Barangay Governance';
+
+export const ROLE_HOME: Record<RoleId, string> = {
+  system_admin: '/dashboard',
+  punong_barangay: '/dashboard',
+  barangay_secretary: '/documents/queue',
+  barangay_treasurer: '/collections/reference-log',
+  drrm_focal: '/drrm',
+  gad_focal: '/gad',
+  municipal_reviewer: '/review/municipal-city',
+  read_only_auditor: '/reports',
+};
+
+export const USERNAME_TO_ROLE: Record<string, RoleId> = {
+  admin: 'system_admin',
+  captain: 'punong_barangay',
+  secretary: 'barangay_secretary',
+  treasurer: 'barangay_treasurer',
+  drrm: 'drrm_focal',
+  gad: 'gad_focal',
+  reviewer: 'municipal_reviewer',
+  auditor: 'read_only_auditor',
+};

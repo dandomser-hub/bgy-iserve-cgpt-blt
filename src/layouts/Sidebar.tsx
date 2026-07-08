@@ -1,11 +1,11 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Home, FileText, Wallet, Scale, Shield,
   AlertTriangle, Heart, BarChart2, Map, Settings, UserCog,
   ClipboardList, Layers, ChevronDown, ChevronRight, BookOpen,
-  Activity, Archive, Star
+  Activity, Archive, Star, Building2
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRole } from '@/app/providers/RoleProvider';
 import { hasPermission } from '@/utils/permissions';
 import { BARANGAY_INFO } from '@/data/mockReferenceData';
@@ -20,7 +20,7 @@ interface NavItem {
   children?: NavItem[];
 }
 
-function getNavGroups(roleId: RoleId): { group: string; items: NavItem[] }[] {
+function getNavGroups(_roleId: RoleId): { group: string; items: NavItem[] }[] {
   return [
     {
       group: 'Overview',
@@ -125,18 +125,37 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { roleId } = useRole();
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    Overview: true, Registry: true, Documents: true, Collections: true,
-    'Blotter & KP': true, DRRM: false, GAD: false, 'Reports & Review': true,
-    Administration: false, 'Future Roadmap': true,
-  });
+  const location = useLocation();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+
+  const navGroups = useMemo(() => {
+    if (!roleId) return [];
+    return getNavGroups(roleId);
+  }, [roleId]);
+
+  const activeGroup = useMemo(() => {
+    if (!roleId) return null;
+    for (const { group, items } of navGroups) {
+      const visible = items.filter(item => isAllowed(roleId, item));
+      if (visible.some(item =>
+        location.pathname === item.path ||
+        location.pathname.startsWith(item.path + '/')
+      )) {
+        return group;
+      }
+    }
+    return null;
+  }, [location.pathname, navGroups, roleId]);
 
   if (!roleId) return null;
 
-  const navGroups = getNavGroups(roleId);
-
   function toggleGroup(group: string) {
     setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+  }
+
+  function isExpanded(group: string): boolean {
+    if (group in expandedGroups) return expandedGroups[group];
+    return group === activeGroup;
   }
 
   return (
@@ -157,7 +176,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="p-5 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-forest font-black text-sm">iS</span>
+              <Building2 size={18} className="text-forest" />
             </div>
             <div>
               <p className="text-white font-bold text-sm leading-tight">Barangay iSERVE</p>
@@ -171,7 +190,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           {navGroups.map(({ group, items }) => {
             const visibleItems = items.filter(item => isAllowed(roleId, item));
             if (visibleItems.length === 0) return null;
-            const isExpanded = expandedGroups[group] !== false;
+            const expanded = isExpanded(group);
 
             return (
               <div key={group} className="mb-1">
@@ -180,9 +199,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-green-300/80 uppercase tracking-wider hover:text-green-200 transition-colors"
                 >
                   <span>{group}</span>
-                  {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                 </button>
-                {isExpanded && (
+                {expanded && (
                   <div className="space-y-0.5">
                     {visibleItems.map(item => (
                       <NavLink
