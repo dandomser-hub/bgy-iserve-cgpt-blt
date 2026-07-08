@@ -112,6 +112,12 @@ export function RoleSelectorPage() {
             <ChevronRight size={14} />
           </button>
 
+          <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-center">
+            <p className="text-amber-700 text-[11px]">
+              For DEMO purposes, Username: <span className="font-mono font-semibold">admin</span>, Password: <span className="font-mono font-semibold">demo1234</span>
+            </p>
+          </div>
+
         </form>
       </div>
 
