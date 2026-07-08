@@ -42,8 +42,8 @@ export function StatCard({ title, value, subtitle, icon, color = 'forest', trend
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide truncate">{title}</p>
-        <p className="text-2xl font-bold text-slate-900 mt-0.5">{value}</p>
+        <p className="text-xs font-medium text-slate-500 uppercase tracking-wide leading-snug">{title}</p>
+        <p className="text-xl font-bold text-slate-900 mt-0.5 break-words">{value}</p>
         {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
         {trend && (
           <p className={`text-xs mt-1 font-medium ${trend.direction === 'up' ? 'text-green-600' : 'text-red-500'}`}>

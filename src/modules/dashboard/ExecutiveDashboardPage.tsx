@@ -65,7 +65,7 @@ export function ExecutiveDashboardPage() {
       )}
 
       {/* Metric grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
         <StatCard title="Active Residents" value={activeResidents} subtitle={`${residents.length} total registered`} icon={<Users size={20} />} color="forest" />
         <StatCard title="Households" value={households.length} subtitle="Registered households" icon={<Home size={20} />} color="grass" />
         <StatCard title="Pending Documents" value={pendingDocs} subtitle="Awaiting action" icon={<FileText size={20} />} color="amber" />
