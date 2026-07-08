@@ -58,7 +58,7 @@ export function RoleSelectorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-ocean to-cyan-500 flex flex-col items-center justify-start py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 flex flex-col items-center justify-start py-10 px-4">
 
       {/* ── Login Card ── */}
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
