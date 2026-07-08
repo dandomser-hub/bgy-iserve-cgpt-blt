@@ -1,0 +1,218 @@
+import { NavLink } from 'react-router-dom';
+import {
+  LayoutDashboard, Users, Home, FileText, Wallet, Scale, Shield,
+  AlertTriangle, Heart, BarChart2, Map, Settings, UserCog,
+  ClipboardList, Layers, ChevronDown, ChevronRight, BookOpen,
+  Activity, Archive, Star
+} from 'lucide-react';
+import { useState } from 'react';
+import { useRole } from '@/app/providers/RoleProvider';
+import { hasPermission } from '@/utils/permissions';
+import { BARANGAY_INFO } from '@/data/mockReferenceData';
+import type { RoleId, Permission } from '@/types/auth';
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  permission?: Permission;
+  permissions?: Permission[];
+  children?: NavItem[];
+}
+
+function getNavGroups(roleId: RoleId): { group: string; items: NavItem[] }[] {
+  return [
+    {
+      group: 'Overview',
+      items: [
+        { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={16} />, permissions: ['dashboard.executive', 'reports.view'] },
+      ],
+    },
+    {
+      group: 'Registry',
+      items: [
+        { label: 'Residents', path: '/residents', icon: <Users size={16} />, permission: 'residents.view' },
+        { label: 'Households', path: '/households', icon: <Home size={16} />, permission: 'households.view' },
+      ],
+    },
+    {
+      group: 'Documents',
+      items: [
+        { label: 'Request Intake', path: '/documents/intake', icon: <FileText size={16} />, permission: 'documents.create' },
+        { label: 'Document Queue', path: '/documents/queue', icon: <Layers size={16} />, permission: 'documents.view' },
+        { label: 'Templates', path: '/documents/templates', icon: <BookOpen size={16} />, permission: 'documents.templates' },
+        { label: 'Verification', path: '/documents/verification', icon: <Shield size={16} />, permission: 'documents.view' },
+      ],
+    },
+    {
+      group: 'Collections',
+      items: [
+        { label: 'Reference Log', path: '/collections/reference-log', icon: <Wallet size={16} />, permission: 'collections.view' },
+        { label: 'Daily Certification', path: '/collections/daily-certification', icon: <ClipboardList size={16} />, permission: 'collections.certify' },
+        { label: 'Fees & Exemptions', path: '/collections/fees-exemptions', icon: <Archive size={16} />, permission: 'collections.fees' },
+      ],
+    },
+    {
+      group: 'Blotter & KP',
+      items: [
+        { label: 'Blotter Registry', path: '/blotter', icon: <Scale size={16} />, permission: 'blotter.view' },
+        { label: 'KP Case Tracker', path: '/kp-cases', icon: <Activity size={16} />, permission: 'kp.view' },
+      ],
+    },
+    {
+      group: 'DRRM',
+      items: [
+        { label: 'DRRM Dashboard', path: '/drrm', icon: <AlertTriangle size={16} />, permission: 'drrm.view' },
+        { label: 'Early Warning', path: '/drrm/early-warning', icon: <AlertTriangle size={16} />, permission: 'drrm.view' },
+        { label: 'SitRep Builder', path: '/drrm/sitrep', icon: <FileText size={16} />, permission: 'drrm.view' },
+        { label: 'DANA Form', path: '/drrm/dana', icon: <Map size={16} />, permission: 'drrm.view' },
+        { label: 'Evacuation / DROMIC', path: '/drrm/evacuation-dromic', icon: <Home size={16} />, permission: 'drrm.view' },
+        { label: 'Hazard & Risk', path: '/drrm/hazard-risk', icon: <Map size={16} />, permission: 'drrm.view' },
+        { label: 'DRRM Resources', path: '/drrm/resources', icon: <Archive size={16} />, permission: 'drrm.view' },
+        { label: 'Relief Distribution', path: '/drrm/relief-distribution', icon: <Heart size={16} />, permission: 'drrm.view' },
+        { label: 'BDRRMC Actions', path: '/drrm/actions', icon: <ClipboardList size={16} />, permission: 'drrm.view' },
+      ],
+    },
+    {
+      group: 'GAD',
+      items: [
+        { label: 'GAD Dashboard', path: '/gad', icon: <Heart size={16} />, permission: 'gad.view' },
+        { label: 'Annex D-1', path: '/gad/annex-d1', icon: <FileText size={16} />, permission: 'gad.view' },
+        { label: 'Annex E-1', path: '/gad/annex-e1', icon: <FileText size={16} />, permission: 'gad.view' },
+        { label: 'Activity Monitor', path: '/gad/activity-monitor', icon: <Activity size={16} />, permission: 'gad.view' },
+        { label: 'Participant Log', path: '/gad/participants', icon: <Users size={16} />, permission: 'gad.view' },
+        { label: 'Budget Attribution', path: '/gad/budget-attribution', icon: <Wallet size={16} />, permission: 'gad.view' },
+      ],
+    },
+    {
+      group: 'Reports & Review',
+      items: [
+        { label: 'Reports & Exports', path: '/reports', icon: <BarChart2 size={16} />, permission: 'reports.view' },
+        { label: 'Municipal Review', path: '/review/municipal-city', icon: <Star size={16} />, permission: 'review.view' },
+        { label: 'Compliance (SGLGB)', path: '/compliance/sglgb', icon: <Shield size={16} />, permission: 'reports.view' },
+        { label: 'Data Quality', path: '/data-quality', icon: <Activity size={16} />, permission: 'reports.view' },
+      ],
+    },
+    {
+      group: 'Administration',
+      items: [
+        { label: 'Users & Roles', path: '/admin/users-roles', icon: <UserCog size={16} />, permission: 'admin.users' },
+        { label: 'Audit Trail', path: '/admin/audit', icon: <ClipboardList size={16} />, permission: 'admin.audit' },
+        { label: 'Backup & Sync', path: '/admin/backup-sync', icon: <Archive size={16} />, permission: 'admin.backup' },
+        { label: 'Settings', path: '/admin/settings', icon: <Settings size={16} />, permission: 'admin.settings' },
+      ],
+    },
+    {
+      group: 'Future Roadmap',
+      items: [
+        { label: 'Future Modules', path: '/roadmap', icon: <Map size={16} /> },
+      ],
+    },
+  ];
+}
+
+function isAllowed(roleId: RoleId, item: NavItem): boolean {
+  if (!item.permission && !item.permissions) return true;
+  if (item.permission) return hasPermission(roleId, item.permission);
+  if (item.permissions) return item.permissions.some(p => hasPermission(roleId, p));
+  return false;
+}
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const { roleId } = useRole();
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    Overview: true, Registry: true, Documents: true, Collections: true,
+    'Blotter & KP': true, DRRM: false, GAD: false, 'Reports & Review': true,
+    Administration: false, 'Future Roadmap': true,
+  });
+
+  if (!roleId) return null;
+
+  const navGroups = getNavGroups(roleId);
+
+  function toggleGroup(group: string) {
+    setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+  }
+
+  return (
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/50 z-30 lg:hidden" onClick={onClose} />
+      )}
+      {/* Sidebar */}
+      <aside className={`
+        fixed top-0 left-0 h-full w-64 z-40 flex flex-col
+        bg-gradient-to-b from-forest-dark to-forest
+        transform transition-transform duration-300 ease-in-out
+        lg:static lg:translate-x-0 lg:z-auto lg:flex-shrink-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Logo area */}
+        <div className="p-5 border-b border-white/10 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-forest font-black text-sm">iS</span>
+            </div>
+            <div>
+              <p className="text-white font-bold text-sm leading-tight">Barangay iSERVE</p>
+              <p className="text-green-200 text-[10px] leading-tight">{BARANGAY_INFO.name}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 overflow-y-auto py-3 scrollbar-thin px-2">
+          {navGroups.map(({ group, items }) => {
+            const visibleItems = items.filter(item => isAllowed(roleId, item));
+            if (visibleItems.length === 0) return null;
+            const isExpanded = expandedGroups[group] !== false;
+
+            return (
+              <div key={group} className="mb-1">
+                <button
+                  onClick={() => toggleGroup(group)}
+                  className="w-full flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-green-300/80 uppercase tracking-wider hover:text-green-200 transition-colors"
+                >
+                  <span>{group}</span>
+                  {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                </button>
+                {isExpanded && (
+                  <div className="space-y-0.5">
+                    {visibleItems.map(item => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        onClick={onClose}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                            isActive
+                              ? 'bg-white/20 text-white'
+                              : 'text-green-100 hover:bg-white/10 hover:text-white'
+                          }`
+                        }
+                      >
+                        {item.icon}
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Footer */}
+        <div className="p-3 border-t border-white/10 flex-shrink-0">
+          <p className="text-green-300/60 text-[10px] text-center">Barangay iSERVE v0.1 · Prototype</p>
+        </div>
+      </aside>
+    </>
+  );
+}
