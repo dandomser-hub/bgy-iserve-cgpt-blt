@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Star, FileText, Wallet, AlertTriangle, Users, Eye, Search, Building2, Lock, User, ChevronRight } from 'lucide-react';
+import { Shield, Star, FileText, Wallet, AlertTriangle, Users, Eye, Search, MapPin, Lock, User, ChevronRight } from 'lucide-react';
 import { useRole } from '@/app/providers/RoleProvider';
 import { ROLES, ROLE_HOME, USERNAME_TO_ROLE, APP_NAME, APP_TAGLINE } from '@/utils/constants';
 import type { RoleId } from '@/types/auth';
@@ -58,25 +58,25 @@ export function RoleSelectorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-forest-dark via-forest to-ocean flex flex-col items-center justify-start py-10 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-ocean to-cyan-500 flex flex-col items-center justify-start py-10 px-4">
 
       {/* ── Login Card ── */}
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Card header strip */}
         <div className="bg-gradient-to-r from-forest-dark to-forest px-6 py-5 flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Building2 size={20} className="text-white" />
+            <MapPin size={20} className="text-white" />
           </div>
           <div>
             <h1 className="text-white font-bold text-base leading-tight">{APP_NAME}</h1>
-            <p className="text-green-200 text-xs leading-tight">Barangay Management System</p>
+            <p className="text-green-200 text-xs leading-tight">Barangay Management Information System</p>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleLogin} className="px-6 py-6 space-y-4">
           <div>
-            <p className="text-gray-800 font-semibold text-sm">Sign in to your account</p>
+            <p className="text-gray-800 font-semibold text-sm">Sign in to your iSERVE account</p>
             <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{APP_TAGLINE}</p>
           </div>
 

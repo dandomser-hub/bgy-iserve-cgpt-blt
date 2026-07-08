@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Users, Home, FileText, Wallet, Scale, Shield,
   AlertTriangle, Heart, BarChart2, Map, Settings, UserCog,
   ClipboardList, Layers, ChevronDown, ChevronRight, BookOpen,
-  Activity, Archive, Star, Building2
+  Activity, Archive, Star, MapPin
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRole } from '@/app/providers/RoleProvider';
@@ -176,7 +176,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         <div className="p-5 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
-              <Building2 size={18} className="text-forest" />
+              <MapPin size={18} className="text-forest" />
             </div>
             <div>
               <p className="text-white font-bold text-sm leading-tight">Barangay iSERVE</p>
