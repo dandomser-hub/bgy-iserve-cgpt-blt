@@ -24,7 +24,7 @@ export const APP_NAME = 'Barangay iSERVE';
 export const APP_TAGLINE = 'Integrated System for Efficient, Resilient, Verified, and Empowered Barangay Governance';
 
 export const ROLE_HOME: Record<RoleId, string> = {
-  system_admin: '/dashboard',
+  system_admin: '/admin/users-roles',
   punong_barangay: '/dashboard',
   barangay_secretary: '/documents/queue',
   barangay_treasurer: '/collections/reference-log',
