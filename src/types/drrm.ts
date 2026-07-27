@@ -1,6 +1,106 @@
 export type AlertSeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
 export type AlertType = 'Typhoon' | 'Flooding' | 'Landslide' | 'Earthquake' | 'Fire' | 'Drought' | 'Storm Surge' | 'Other';
-export type DRRMReportStatus = 'Draft' | 'For Review' | 'Approved' | 'Exported' | 'Submitted' | 'Archived';
+export type DRRMReportStatus =
+  | 'Draft'
+  | 'For Review'
+  | 'Returned'
+  | 'Approved'
+  | 'Exported'
+  | 'Submitted'
+  | 'Archived';
+export type DRRMWorkflowAction =
+  | 'submit-for-review'
+  | 'approve'
+  | 'return'
+  | 'submit';
+
+export interface DRRMWorkflowHistoryEntry {
+  id: string;
+  action: DRRMWorkflowAction;
+  actionLabel: string;
+  fromStatus: DRRMReportStatus;
+  toStatus: DRRMReportStatus;
+  performedBy: string;
+  performedAt: string;
+  remarks?: string;
+}
+
+export type DRRMProvenanceSourceType =
+  | 'Officer Entry'
+  | 'Field Observation'
+  | 'Household Registration'
+  | 'Evacuation Center Registration'
+  | 'Linked DRRM Record'
+  | 'Derived Calculation';
+
+export interface DRRMFieldProvenance {
+  id: string;
+  fieldPaths: string[];
+  sourceType: DRRMProvenanceSourceType;
+  sourceReference: string;
+  capturedBy: string;
+  capturedAt: string;
+  evidenceReferences: string[];
+  notes?: string;
+}
+
+export interface DRRMReportVersionEntry {
+  version: number;
+  createdAt: string;
+  createdBy: string;
+  reason: 'Initial Record' | 'Legacy Version' | 'Draft Update' | 'Returned Correction';
+  supersedesVersion?: number;
+  changedFields: string[];
+  sourceReference: string;
+  snapshot: Record<string, unknown>;
+}
+
+export type DRRMValidationOutcome = 'Passed' | 'Passed with Advisory' | 'Failed';
+
+export interface DRRMValidationEvidence {
+  id: string;
+  version: number;
+  validatedAt: string;
+  validatedBy: string;
+  outcome: DRRMValidationOutcome;
+  checks: {
+    id: string;
+    label: string;
+    outcome: 'Passed' | 'Advisory' | 'Failed';
+    message: string;
+  }[];
+  evidenceReferences: string[];
+}
+
+export type DRRMReconciliationStatus = 'Matched' | 'Variance' | 'Incomplete';
+
+export interface DRRMReconciliationItem {
+  id: string;
+  label: string;
+  reportedValue?: number;
+  referenceValue?: number;
+  status: DRRMReconciliationStatus;
+  blocking: boolean;
+  sourceReference: string;
+  explanation: string;
+}
+
+export interface DRRMReconciliationEvidence {
+  id: string;
+  version: number;
+  reconciledAt: string;
+  reconciledBy: string;
+  status: DRRMReconciliationStatus;
+  items: DRRMReconciliationItem[];
+}
+
+export interface DRRMReportControl {
+  currentVersion: number;
+  versions: DRRMReportVersionEntry[];
+  fieldProvenance: DRRMFieldProvenance[];
+  validationEvidence: DRRMValidationEvidence[];
+  reconciliationEvidence: DRRMReconciliationEvidence[];
+}
 export type RiskLevel = 'Low' | 'Moderate' | 'High' | 'Very High';
 export type ResourceCondition = 'Good' | 'Fair' | 'Poor' | 'For Repair' | 'Condemned';
 export type ResourceAvailability = 'Available' | 'Deployed' | 'In Maintenance' | 'Unavailable';
@@ -160,7 +260,9 @@ export interface SitRep extends DRRMOperationalContext {
   preparedBy: string;
   submittedBy?: string;
   version: number;
+  reportControl: DRRMReportControl;
   status: DRRMReportStatus;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   createdAt: string;
   updatedAt: string;
 }
@@ -178,7 +280,10 @@ export interface DANARecord extends DRRMOperationalContext {
   validationStatus: 'Pending' | 'Validated' | 'Returned';
   assessedBy: string;
   evidenceNotes?: string;
+  version: number;
+  reportControl: DRRMReportControl;
   status: DRRMReportStatus;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   createdAt: string;
 }
 
@@ -205,6 +310,10 @@ export interface EvacuationRecord extends DRRMOperationalContext {
   needs: string[];
   reportingDate: string;
   status: 'Open' | 'Closed' | 'Stand-by';
+  reportStatus: DRRMReportStatus;
+  version: number;
+  reportControl: DRRMReportControl;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   managedBy: string;
   locationType: 'Inside Evacuation Center' | 'Outside Evacuation Center';
   householdEpisodes: DisplacementEpisode[];

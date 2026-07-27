@@ -1,4 +1,9 @@
 import { AlertCircle, CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
+import { useAudit } from '@/app/providers/AuditProvider';
+import { useMockData } from '@/app/providers/MockDataProvider';
+import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
+import { DRRMReportEvidencePanel } from '@/components/shared/DRRMReportEvidencePanel';
+import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
@@ -6,17 +11,90 @@ import {
   getDisasterEvent,
   getOperationalPeriod,
   mockDisasterEvents,
-  mockEvacuationRecords,
 } from '@/data/mockDRRM';
+import type { DRRMWorkflowAction, EvacuationRecord } from '@/types/drrm';
 import { formatDate } from '@/utils/formatters';
 import {
   DROMIC_AGE_BANDS,
   evaluateDROMICProfile,
   sumSexDisaggregatedCount,
 } from '@/utils/dromic';
+import {
+  applyDRRMWorkflowTransition,
+  validateDROMICForReview,
+} from '@/utils/drrmWorkflow';
+import { retainReviewEvidence } from '@/utils/drrmReportControl';
+import {
+  getBlockingReconciliationIssues,
+  reconcileDROMIC,
+} from '@/utils/drrmReconciliation';
 
 export function EvacuationDromicPage() {
   const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
+  const { evacuationRecords, setEvacuationRecords, showToast } = useMockData();
+  const { roleId } = useRole();
+  const currentRole = useCurrentRole();
+  const { logEvent } = useAudit();
+
+  function handleTransition(
+    record: EvacuationRecord,
+    action: DRRMWorkflowAction,
+    remarks?: string,
+  ) {
+    try {
+      const now = new Date().toISOString();
+      const reconciliation = reconcileDROMIC(
+        record,
+        currentRole?.label ?? 'Unknown User',
+        now,
+      );
+      const validationIssues = [
+        ...validateDROMICForReview(record),
+        ...getBlockingReconciliationIssues(reconciliation),
+      ];
+      const result = applyDRRMWorkflowTransition({
+        status: record.reportStatus,
+        history: record.workflowHistory,
+        action,
+        roleId,
+        performedBy: currentRole?.label ?? 'Unknown User',
+        remarks,
+        validationIssues,
+      });
+      setEvacuationRecords(previous => previous.map(item => item.id === record.id ? {
+        ...item,
+        reportStatus: result.status,
+        workflowHistory: result.workflowHistory,
+        reportControl: action === 'submit-for-review'
+          ? retainReviewEvidence(item.reportControl, {
+              recordId: item.id,
+              actor: currentRole?.label ?? 'Unknown User',
+              validatedAt: now,
+              validationIssues,
+              reconciliation,
+              evidenceReferences: [
+                item.disaggregatedPopulation?.source ?? 'Household displacement episodes',
+                getOperationalPeriod(item.operationalPeriodId)?.reportingCutoff
+                  ?? item.operationalPeriodId,
+              ],
+            })
+          : item.reportControl,
+      } : item));
+      logEvent({
+        action: action === 'approve' ? 'Approved'
+          : action === 'return' ? 'Returned'
+          : action === 'submit' ? 'Submitted'
+          : 'Validated',
+        module: 'DRRM',
+        recordId: record.id,
+        recordLabel: record.evacuationCenterName,
+        description: `${result.workflowHistory[result.workflowHistory.length - 1]?.actionLabel}: ${record.evacuationCenterName}`,
+      });
+      showToast(`${record.evacuationCenterName} report moved to ${result.status}.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Workflow action failed.', 'error');
+    }
+  }
 
   return (
     <PageScaffold
@@ -56,7 +134,7 @@ export function EvacuationDromicPage() {
 
       {/* Evacuation Centers Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {mockEvacuationRecords.map(center => {
+        {evacuationRecords.map(center => {
           const profileSummary = evaluateDROMICProfile(center);
           const profile = center.disaggregatedPopulation;
 
@@ -258,6 +336,29 @@ export function EvacuationDromicPage() {
                   <span className="font-semibold text-slate-800">{center.managedBy}</span>
                 </div>
               </div>
+
+              <DRRMReportEvidencePanel
+                control={center.reportControl}
+                liveReconciliation={reconcileDROMIC(
+                  center,
+                  currentRole?.label ?? 'Current Viewer',
+                  new Date().toISOString(),
+                )}
+              />
+
+              <DRRMWorkflowPanel
+                status={center.reportStatus}
+                history={center.workflowHistory}
+                validationIssues={[
+                  ...validateDROMICForReview(center),
+                  ...getBlockingReconciliationIssues(reconcileDROMIC(
+                    center,
+                    currentRole?.label ?? 'Current Viewer',
+                    new Date().toISOString(),
+                  )),
+                ]}
+                onTransition={(action, remarks) => handleTransition(center, action, remarks)}
+              />
             </div>
           </Card>
           );
@@ -265,7 +366,7 @@ export function EvacuationDromicPage() {
       </div>
 
       {/* Empty State */}
-      {mockEvacuationRecords.length === 0 && (
+      {evacuationRecords.length === 0 && (
         <Card className="text-center py-12 bg-slate-50 border-slate-200">
           <p className="text-slate-600 font-medium">No evacuation centers on record</p>
         </Card>

@@ -14,6 +14,7 @@ import type {
   DRRMRecordReference,
   DRRMRecordType,
 } from "@/types/drrm";
+import { createInitialReportControl } from "@/utils/drrmReportControl";
 
 export const mockDisasterEvents: DisasterEvent[] = [
   {
@@ -143,6 +144,78 @@ const context = {
   emong3: { eventId: "DE001", operationalPeriodId: "OP003" },
   fire1: { eventId: "DE002", operationalPeriodId: "OP004" },
 } as const;
+
+function sitRepControl(
+  id: string,
+  version: number,
+  actor: string,
+  capturedAt: string,
+) {
+  return createInitialReportControl({
+    recordId: id,
+    version,
+    actor,
+    capturedAt,
+    sourceReference: "Barangay EOC SitRep encoding",
+    sourceType: "Officer Entry",
+    fieldPaths: [
+      "affectedAreas",
+      "casualties",
+      "injuries",
+      "missingPersons",
+      "affectedFamilies",
+      "affectedPersons",
+      "lifelinesStatus",
+      "immediateNeeds",
+      "actionsTaken",
+    ],
+    evidenceReferences: ["Controlled event and operational-period records"],
+  });
+}
+
+function danaControl(id: string, actor: string, capturedAt: string, evidenceReference?: string) {
+  return createInitialReportControl({
+    recordId: id,
+    actor,
+    capturedAt,
+    sourceReference: evidenceReference ?? "Field DANA assessment",
+    sourceType: "Field Observation",
+    fieldPaths: [
+      "assessmentDate",
+      "sector",
+      "affectedHouseholds",
+      "affectedPersons",
+      "damageDescription",
+      "estimatedDamage",
+      "immediateNeeds",
+    ],
+    evidenceReferences: evidenceReference ? [evidenceReference] : [],
+  });
+}
+
+function dromicControl(
+  id: string,
+  actor: string,
+  capturedAt: string,
+  sourceReference: string,
+) {
+  return createInitialReportControl({
+    recordId: id,
+    actor,
+    capturedAt,
+    sourceReference,
+    sourceType: "Evacuation Center Registration",
+    fieldPaths: [
+      "displacedFamilies",
+      "displacedPersons",
+      "disaggregatedPopulation",
+      "householdEpisodes",
+      "originPuroks",
+      "needs",
+    ],
+    evidenceReferences: ["Household displacement episode registry"],
+  });
+}
 
 export const disasterEventById = new Map(
   mockDisasterEvents.map((event) => [event.id, event]),
@@ -293,6 +366,7 @@ export const mockSitReps: SitRep[] = [
     preparedBy: "DRRM Focal Mangubat",
     submittedBy: "Hon. Reyes (Punong Barangay)",
     version: 2,
+    reportControl: sitRepControl("SR001", 2, "DRRM Focal Mangubat", "2024-06-11T07:00:00"),
     status: "Submitted",
     createdAt: "2024-06-10T08:00:00",
     updatedAt: "2024-06-11T07:00:00",
@@ -322,6 +396,7 @@ export const mockSitReps: SitRep[] = [
     ],
     preparedBy: "DRRM Focal Mangubat",
     version: 1,
+    reportControl: sitRepControl("SR002", 1, "DRRM Focal Mangubat", "2024-06-11T08:00:00"),
     status: "Approved",
     createdAt: "2024-06-11T08:00:00",
     updatedAt: "2024-06-11T15:00:00",
@@ -354,6 +429,7 @@ export const mockSitReps: SitRep[] = [
     preparedBy: "DRRM Focal Mangubat",
     submittedBy: "Hon. Reyes",
     version: 1,
+    reportControl: sitRepControl("SR003", 1, "DRRM Focal Mangubat", "2024-04-05T20:00:00"),
     status: "Archived",
     createdAt: "2024-04-05T20:00:00",
     updatedAt: "2024-04-10T09:00:00",
@@ -382,6 +458,7 @@ export const mockSitReps: SitRep[] = [
     ],
     preparedBy: "DRRM Focal Mangubat",
     version: 1,
+    reportControl: sitRepControl("SR004", 1, "DRRM Focal Mangubat", "2024-06-13T08:00:00"),
     status: "Draft",
     createdAt: "2024-06-13T08:00:00",
     updatedAt: "2024-06-13T08:00:00",
@@ -408,6 +485,13 @@ export const mockDANARecords: DANARecord[] = [
     validationStatus: "Validated",
     assessedBy: "DRRM Focal Mangubat",
     evidenceNotes: "Photos taken and filed. MDRRMO team co-assessed.",
+    version: 1,
+    reportControl: danaControl(
+      "DANA001",
+      "DRRM Focal Mangubat",
+      "2024-06-12T09:00:00",
+      "Photos filed; MDRRMO co-assessment",
+    ),
     status: "Submitted",
     createdAt: "2024-06-12T09:00:00",
   },
@@ -425,6 +509,14 @@ export const mockDANARecords: DANARecord[] = [
     immediateNeeds: ["Seeds for replanting", "Agricultural assistance"],
     validationStatus: "Validated",
     assessedBy: "DRRM Focal Mangubat",
+    evidenceNotes: "Agriculture damage assessment worksheet and field photos on file.",
+    version: 1,
+    reportControl: danaControl(
+      "DANA002",
+      "DRRM Focal Mangubat",
+      "2024-06-12T10:00:00",
+      "Agriculture damage assessment worksheet and field photos",
+    ),
     status: "Approved",
     createdAt: "2024-06-12T10:00:00",
   },
@@ -442,6 +534,14 @@ export const mockDANARecords: DANARecord[] = [
     immediateNeeds: ["Livelihood assistance", "Temporary business space"],
     validationStatus: "Validated",
     assessedBy: "DRRM Focal Mangubat",
+    evidenceNotes: "BFP incident record and market-stall assessment sheets on file.",
+    version: 1,
+    reportControl: danaControl(
+      "DANA003",
+      "DRRM Focal Mangubat",
+      "2024-04-06T09:00:00",
+      "BFP incident record and market-stall assessment sheets",
+    ),
     status: "Archived",
     createdAt: "2024-04-06T09:00:00",
   },
@@ -459,6 +559,8 @@ export const mockDANARecords: DANARecord[] = [
     immediateNeeds: ["Road clearing materials", "Drainage repair"],
     validationStatus: "Pending",
     assessedBy: "DRRM Focal Mangubat",
+    version: 1,
+    reportControl: danaControl("DANA004", "DRRM Focal Mangubat", "2024-06-13T11:00:00"),
     status: "Draft",
     createdAt: "2024-06-13T11:00:00",
   },
@@ -508,6 +610,14 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     ],
     reportingDate: "2024-06-10",
     status: "Closed",
+    reportStatus: "Submitted",
+    version: 1,
+    reportControl: dromicControl(
+      "EV001",
+      "DRRM Focal Mangubat",
+      "2024-06-10T20:00:00",
+      "Evacuation center registration and household validation",
+    ),
     managedBy: "DRRM Focal Mangubat",
     locationType: "Inside Evacuation Center",
     householdEpisodes: [
@@ -560,6 +670,14 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Food packs", "Water", "Medicines"],
     reportingDate: "2024-06-10",
     status: "Closed",
+    reportStatus: "Approved",
+    version: 1,
+    reportControl: dromicControl(
+      "EV002",
+      "DRRM Focal Mangubat",
+      "2024-06-10T20:15:00",
+      "Evacuation center registration and household validation",
+    ),
     managedBy: "DRRM Focal Mangubat",
     locationType: "Inside Evacuation Center",
     householdEpisodes: [
@@ -586,6 +704,14 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Food", "Hygiene kits"],
     reportingDate: "2024-06-10",
     status: "Closed",
+    reportStatus: "Draft",
+    version: 1,
+    reportControl: dromicControl(
+      "EV003",
+      "DRRM Focal Mangubat",
+      "2024-06-10T09:00:00",
+      "Outside-EC household validation",
+    ),
     managedBy: "DRRM Focal Mangubat",
     locationType: "Outside Evacuation Center",
     householdEpisodes: [
@@ -612,6 +738,14 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Temporary shelter support", "Food packs", "Livelihood assistance"],
     reportingDate: "2024-04-05",
     status: "Closed",
+    reportStatus: "Archived",
+    version: 1,
+    reportControl: dromicControl(
+      "EV004",
+      "DRRM Focal Mangubat",
+      "2024-04-05T20:00:00",
+      "Host-family displacement validation",
+    ),
     managedBy: "DRRM Focal Mangubat",
     locationType: "Outside Evacuation Center",
     householdEpisodes: [
