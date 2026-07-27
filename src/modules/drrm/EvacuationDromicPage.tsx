@@ -2,18 +2,53 @@ import { Users, MapPin, Clock } from 'lucide-react';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
-import { mockEvacuationRecords } from '@/data/mockDRRM';
+import {
+  getDisasterEvent,
+  getOperationalPeriod,
+  mockDisasterEvents,
+  mockEvacuationRecords,
+} from '@/data/mockDRRM';
 import { formatDate } from '@/utils/formatters';
 
 export function EvacuationDromicPage() {
+  const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
+
   return (
     <PageScaffold
-      title="Evacuation Center DROMIC"
-      subtitle="Displaced Resident Operations Monitoring Information System"
-      breadcrumbs={[{ label: 'DRRM' }, { label: 'Evacuation Centers' }]}
+      title="Evacuation and Displacement"
+      subtitle="DROMIC-ready monitoring: Disaster Response Operations Management, Information and Communication"
+      breadcrumbs={[{ label: 'DRRM' }, { label: 'Evacuation and Displacement' }]}
       moduleTag="DRRM"
       priorityTag="P0"
     >
+      {currentEvent && (
+        <Card className="mb-6">
+          <div className="p-5 border-b border-slate-100">
+            <h3 className="font-semibold text-slate-800">DROMIC population snapshot — {currentEvent.name}</h3>
+            <p className="text-xs text-slate-500 mt-1">Current and cumulative figures are stored separately.</p>
+          </div>
+          <div className="p-5 grid grid-cols-2 lg:grid-cols-5 gap-3">
+            {[
+              ['Affected', currentEvent.population.affected],
+              ['Current inside EC', currentEvent.population.currentDisplaced.insideEvacuationCenters],
+              ['Current outside EC', currentEvent.population.currentDisplaced.outsideEvacuationCenters],
+              ['Cumulative inside EC', currentEvent.population.cumulativeDisplaced.insideEvacuationCenters],
+              ['Cumulative outside EC', currentEvent.population.cumulativeDisplaced.outsideEvacuationCenters],
+            ].map(([label, count]) => (
+              <div key={label as string} className="p-3 bg-slate-50 border border-slate-200 rounded">
+                <p className="text-xs text-slate-500 font-semibold">{label as string}</p>
+                <p className="text-lg font-bold text-slate-800 mt-1">
+                  {(count as { families: number; persons: number }).families} families
+                </p>
+                <p className="text-xs text-slate-600">
+                  {(count as { families: number; persons: number }).persons} persons
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Evacuation Centers Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {mockEvacuationRecords.map(center => (
@@ -25,6 +60,10 @@ export function EvacuationDromicPage() {
                   <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                     <MapPin size={14} />
                     {center.address}
+                  </p>
+                  <p className="text-xs text-sky-700 mt-2">
+                    {getDisasterEvent(center.eventId)?.name ?? 'Unknown event'} · Operational Period{' '}
+                    {getOperationalPeriod(center.operationalPeriodId)?.periodNo ?? '—'}
                   </p>
                 </div>
                 <StatusChip status={center.status} />
@@ -46,6 +85,9 @@ export function EvacuationDromicPage() {
             <div className="p-6 space-y-5">
               {/* Demographics Breakdown */}
               <div>
+                <div className="mb-4">
+                  <Badge label={center.locationType} variant="default" className="text-xs" />
+                </div>
                 <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Demographics Breakdown</p>
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
@@ -69,6 +111,13 @@ export function EvacuationDromicPage() {
                     <span className="font-bold text-slate-800">{center.pwdCount}</span>
                   </div>
                 </div>
+              </div>
+
+              <div className="p-3 bg-slate-50 border border-slate-200 rounded">
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Household displacement episodes</p>
+                <p className="text-sm text-slate-700 mt-1">
+                  {center.householdEpisodes.length} sample episode(s); person-level details are captured only when operationally necessary.
+                </p>
               </div>
 
               {/* Origin Puroks */}

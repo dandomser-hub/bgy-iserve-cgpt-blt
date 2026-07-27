@@ -1,7 +1,7 @@
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card, StatCard } from '@/components/ui/Card';
 import { DataTable, type Column } from '@/components/ui/DataTable';
-import { mockReliefDistributions } from '@/data/mockDRRM';
+import { getDisasterEvent, mockReliefDistributions } from '@/data/mockDRRM';
 import type { ReliefDistribution } from '@/types/drrm';
 import { formatDate } from '@/utils/formatters';
 import { Package } from 'lucide-react';
@@ -9,18 +9,18 @@ import { Package } from 'lucide-react';
 export function ReliefDistributionPage() {
   // Calculate metrics
   const totalDistributions = mockReliefDistributions.length;
-  const distinctEvents = new Set(mockReliefDistributions.map(d => d.eventName)).size;
+  const distinctEvents = new Set(mockReliefDistributions.map(d => d.eventId)).size;
 
   // Get unique events for display
   const eventSummary = mockReliefDistributions.reduce((acc, dist) => {
-    const existing = acc.find(e => e.eventName === dist.eventName);
+    const existing = acc.find(e => e.eventId === dist.eventId);
     if (existing) {
       existing.count++;
     } else {
-      acc.push({ eventName: dist.eventName, count: 1 });
+      acc.push({ eventId: dist.eventId, count: 1 });
     }
     return acc;
-  }, [] as Array<{ eventName: string; count: number }>);
+  }, [] as Array<{ eventId: string; count: number }>);
 
   const columns: Column<ReliefDistribution>[] = [
     { key: 'recipientName', header: 'Recipient', render: d => d.recipientName },
@@ -29,7 +29,7 @@ export function ReliefDistributionPage() {
     { key: 'distributionDate', header: 'Distribution Date', render: d => formatDate(d.distributionDate) },
     { key: 'source', header: 'Source', render: d => d.source },
     { key: 'issuedBy', header: 'Issued By', render: d => d.issuedBy },
-    { key: 'eventName', header: 'Event', render: d => d.eventName },
+    { key: 'eventId', header: 'Event', render: d => getDisasterEvent(d.eventId)?.name ?? 'Unknown event' },
     { key: 'remarks', header: 'Remarks', render: d => d.remarks || '—' },
   ];
 
@@ -69,7 +69,9 @@ export function ReliefDistributionPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
               {eventSummary.map((event, idx) => (
                 <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded">
-                  <p className="font-semibold text-slate-800 text-sm">{event.eventName}</p>
+                  <p className="font-semibold text-slate-800 text-sm">
+                    {getDisasterEvent(event.eventId)?.name ?? 'Unknown event'}
+                  </p>
                   <p className="text-xs text-slate-600 mt-1">{event.count} distribution(s)</p>
                 </div>
               ))}

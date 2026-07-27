@@ -4,8 +4,61 @@ export type DRRMReportStatus = 'Draft' | 'For Review' | 'Approved' | 'Exported' 
 export type RiskLevel = 'Low' | 'Moderate' | 'High' | 'Very High';
 export type ResourceCondition = 'Good' | 'Fair' | 'Poor' | 'For Repair' | 'Condemned';
 export type ResourceAvailability = 'Available' | 'Deployed' | 'In Maintenance' | 'Unavailable';
+export type DisasterEventStatus = 'Monitoring' | 'Active' | 'De-escalating' | 'Closed' | 'Archived';
+export type EOCActivationLevel = 'Not Activated' | 'Monitoring' | 'Partial Activation' | 'Full Activation' | 'Deactivated';
 
-export interface EarlyWarning {
+export interface PopulationCount {
+  families: number;
+  persons: number;
+}
+
+export interface DROMICPopulationSnapshot {
+  affected: PopulationCount;
+  currentDisplaced: {
+    insideEvacuationCenters: PopulationCount;
+    outsideEvacuationCenters: PopulationCount;
+  };
+  cumulativeDisplaced: {
+    insideEvacuationCenters: PopulationCount;
+    outsideEvacuationCenters: PopulationCount;
+  };
+  asOf: string;
+}
+
+export interface DisasterEvent {
+  id: string;
+  eventCode: string;
+  name: string;
+  eventType: AlertType;
+  status: DisasterEventStatus;
+  onsetAt: string;
+  closedAt?: string;
+  affectedAreas: string[];
+  leadOfficer: string;
+  population: DROMICPopulationSnapshot;
+}
+
+export interface OperationalPeriod {
+  id: string;
+  eventId: string;
+  periodNo: number;
+  startsAt: string;
+  endsAt: string;
+  reportingCutoff: string;
+  eocActivationLevel: EOCActivationLevel;
+  eocLocation?: string;
+  incidentCommander: string;
+  objectives: string[];
+  status: 'Planned' | 'Active' | 'Completed' | 'Closed';
+  handoverNotes?: string;
+}
+
+export interface DRRMOperationalContext {
+  eventId: string;
+  operationalPeriodId: string;
+}
+
+export interface EarlyWarning extends DRRMOperationalContext {
   id: string;
   alertType: AlertType;
   severity: AlertSeverity;
@@ -18,11 +71,9 @@ export interface EarlyWarning {
   status: 'Active' | 'Lifted' | 'Escalated';
 }
 
-export interface SitRep {
+export interface SitRep extends DRRMOperationalContext {
   id: string;
   sitRepNo: string;
-  eventName: string;
-  reportingPeriod: string;
   affectedAreas: string[];
   casualties: number;
   injuries: number;
@@ -40,11 +91,10 @@ export interface SitRep {
   updatedAt: string;
 }
 
-export interface DANARecord {
+export interface DANARecord extends DRRMOperationalContext {
   id: string;
   danaNo: string;
   assessmentDate: string;
-  eventName: string;
   sector: string;
   affectedHouseholds: number;
   affectedPersons: number;
@@ -58,7 +108,19 @@ export interface DANARecord {
   createdAt: string;
 }
 
-export interface EvacuationRecord {
+export interface DisplacementEpisode {
+  id: string;
+  householdId: string;
+  householdName: string;
+  locationType: 'Inside Evacuation Center' | 'Outside Evacuation Center';
+  checkedInAt: string;
+  checkedOutAt?: string;
+  persons: number;
+  personDetailsCaptured: boolean;
+  personDetailReason?: string;
+}
+
+export interface EvacuationRecord extends DRRMOperationalContext {
   id: string;
   evacuationCenterName: string;
   address: string;
@@ -74,9 +136,11 @@ export interface EvacuationRecord {
   reportingDate: string;
   status: 'Open' | 'Closed' | 'Stand-by';
   managedBy: string;
+  locationType: 'Inside Evacuation Center' | 'Outside Evacuation Center';
+  householdEpisodes: DisplacementEpisode[];
 }
 
-export interface HazardRisk {
+export interface HazardRisk extends DRRMOperationalContext {
   id: string;
   hazardType: AlertType;
   affectedPuroks: string[];
@@ -88,7 +152,7 @@ export interface HazardRisk {
   updatedBy: string;
 }
 
-export interface DRRMResource {
+export interface DRRMResource extends DRRMOperationalContext {
   id: string;
   resourceName: string;
   category: 'Equipment' | 'Supply' | 'Vehicle' | 'Communication' | 'Medical';
@@ -102,7 +166,7 @@ export interface DRRMResource {
   remarks?: string;
 }
 
-export interface ReliefDistribution {
+export interface ReliefDistribution extends DRRMOperationalContext {
   id: string;
   recipientHouseholdId?: string;
   recipientName: string;
@@ -112,11 +176,10 @@ export interface ReliefDistribution {
   distributionDate: string;
   source: string;
   issuedBy: string;
-  eventName: string;
   remarks?: string;
 }
 
-export interface BDRRMCAction {
+export interface BDRRMCAction extends DRRMOperationalContext {
   id: string;
   meetingDate: string;
   agenda: string;
