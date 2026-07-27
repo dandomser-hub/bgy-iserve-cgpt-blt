@@ -1,10 +1,12 @@
 import { AlertTriangle, Users, FileText, Package, BarChart3, Truck, Radio, Link2 } from 'lucide-react';
-import { useMockData } from '@/app/providers/MockDataProvider';
 import { Card, StatCard } from '@/components/ui/Card';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { StatusChip, Badge } from '@/components/ui/Badge';
 import {
   mockEarlyWarnings,
+  mockSitReps,
+  mockEvacuationRecords,
+  mockDANARecords,
   mockDRRMResources,
   mockReliefDistributions,
   mockBDRRMCActions,
@@ -18,7 +20,6 @@ import type { DRRMRecordType } from '@/types/drrm';
 import { formatDateTime, formatDate } from '@/utils/formatters';
 
 export function DRRMDashboardPage() {
-  const { sitReps, danaRecords, evacuationRecords } = useMockData();
   // Calculate metrics
   const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
   const currentOperationalPeriod = currentEvent
@@ -26,8 +27,8 @@ export function DRRMDashboardPage() {
     : undefined;
   const activeAlerts = mockEarlyWarnings.filter(e => e.status === 'Active').length;
   const affectedFamilies = currentEvent?.population.affected.families ?? 0;
-  const activeReports = sitReps.filter(s => ['Draft', 'Returned', 'For Review', 'Approved'].includes(s.status)).length;
-  const pendingDANA = danaRecords.filter(d => ['Draft', 'Returned', 'For Review'].includes(d.status)).length;
+  const activeReports = mockSitReps.filter(s => ['Draft', 'Submitted', 'Approved'].includes(s.status)).length;
+  const pendingDANA = mockDANARecords.filter(d => d.status === 'Draft').length;
   const availableResources = mockDRRMResources.filter(r => r.availability === 'Available').length;
   const totalDistributions = mockReliefDistributions.length;
   const currentEventRecords = currentEvent
@@ -215,12 +216,12 @@ export function DRRMDashboardPage() {
               Evacuation Centers
             </h3>
             <span className="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded">
-              {evacuationRecords.filter(e => e.status === 'Open').length}
+              {mockEvacuationRecords.filter(e => e.status === 'Open').length}
             </span>
           </div>
           <div className="p-5 space-y-3">
-            {evacuationRecords.filter(e => e.status === 'Open').length > 0 ? (
-              evacuationRecords
+            {mockEvacuationRecords.filter(e => e.status === 'Open').length > 0 ? (
+              mockEvacuationRecords
                 .filter(e => e.status === 'Open')
                 .map(center => (
                   <div key={center.id} className="p-3 bg-sky-50 border border-sky-200 rounded-lg">

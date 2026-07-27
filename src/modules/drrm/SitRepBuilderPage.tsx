@@ -1,205 +1,24 @@
-import { ChevronDown, Pencil, Plus } from 'lucide-react';
+import { ChevronDown, Send } from 'lucide-react';
 import { useState } from 'react';
-import { useAudit } from '@/app/providers/AuditProvider';
-import { useMockData } from '@/app/providers/MockDataProvider';
-import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
-import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { StatusChip, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { FormField, Input, Textarea } from '@/components/ui/FormField';
-import { Modal } from '@/components/ui/Modal';
-import {
-  getDisasterEvent,
-  getOperationalPeriod,
-  mockDisasterEvents,
-  mockOperationalPeriods,
-} from '@/data/mockDRRM';
-import type { DRRMWorkflowAction, SitRep } from '@/types/drrm';
+import { getDisasterEvent, getOperationalPeriod, mockSitReps } from '@/data/mockDRRM';
+import type { SitRep } from '@/types/drrm';
 import { formatDate, formatDateTime } from '@/utils/formatters';
-import {
-  applyDRRMWorkflowTransition,
-  validateSitRepForReview,
-} from '@/utils/drrmWorkflow';
 
 type Lifeline = { lifeline: string; status: string };
-type SitRepEditor = {
-  id?: string;
-  affectedAreas: string;
-  affectedFamilies: string;
-  affectedPersons: string;
-  casualties: string;
-  injuries: string;
-  missingPersons: string;
-  immediateNeeds: string;
-  actionsTaken: string;
-};
-
-const EMPTY_EDITOR: SitRepEditor = {
-  affectedAreas: '',
-  affectedFamilies: '0',
-  affectedPersons: '0',
-  casualties: '0',
-  injuries: '0',
-  missingPersons: '0',
-  immediateNeeds: '',
-  actionsTaken: '',
-};
-
-function splitLines(value: string): string[] {
-  return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
-}
 
 export function SitRepBuilderPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const { sitReps, setSitReps, showToast } = useMockData();
-  const { roleId } = useRole();
-  const currentRole = useCurrentRole();
-  const { logEvent } = useAudit();
-  const [editor, setEditor] = useState<SitRepEditor | null>(null);
+  const [submittingId, setSubmittingId] = useState<string | null>(null);
 
-  function openEditor(record?: SitRep) {
-    setEditor(record ? {
-      id: record.id,
-      affectedAreas: record.affectedAreas.join(', '),
-      affectedFamilies: String(record.affectedFamilies),
-      affectedPersons: String(record.affectedPersons),
-      casualties: String(record.casualties),
-      injuries: String(record.injuries),
-      missingPersons: String(record.missingPersons),
-      immediateNeeds: record.immediateNeeds.join('\n'),
-      actionsTaken: record.actionsTaken.join('\n'),
-    } : {
-      ...EMPTY_EDITOR,
-      affectedAreas: mockDisasterEvents.find(event => event.status === 'De-escalating' || event.status === 'Active')
-        ?.affectedAreas.join(', ') ?? '',
-    });
-  }
-
-  function saveEditor() {
-    if (!editor) return;
-    const numbers = {
-      affectedFamilies: Number(editor.affectedFamilies),
-      affectedPersons: Number(editor.affectedPersons),
-      casualties: Number(editor.casualties),
-      injuries: Number(editor.injuries),
-      missingPersons: Number(editor.missingPersons),
-    };
-    if (
-      splitLines(editor.affectedAreas).length === 0 ||
-      Object.values(numbers).some(value => !Number.isInteger(value) || value < 0)
-    ) {
-      showToast('Enter an affected area and non-negative whole-number counts.', 'error');
-      return;
-    }
-
-    const now = new Date().toISOString();
-    if (editor.id) {
-      setSitReps(previous => previous.map(record => record.id === editor.id ? {
-        ...record,
-        ...numbers,
-        affectedAreas: splitLines(editor.affectedAreas),
-        immediateNeeds: splitLines(editor.immediateNeeds),
-        actionsTaken: splitLines(editor.actionsTaken),
-        updatedAt: now,
-      } : record));
-      logEvent({
-        action: 'Updated',
-        module: 'DRRM',
-        recordId: editor.id,
-        recordLabel: sitReps.find(record => record.id === editor.id)?.sitRepNo,
-        description: 'Updated a Draft or Returned SitRep before validation.',
-      });
-      showToast('SitRep changes saved.');
-      setEditor(null);
-      return;
-    }
-
-    const event = mockDisasterEvents.find(
-      item => item.status !== 'Archived' && item.status !== 'Closed',
-    );
-    const period = event
-      ? mockOperationalPeriods.find(item => item.eventId === event.id && item.status === 'Active')
-      : undefined;
-    if (!event || !period) {
-      showToast('An active disaster event and operational period are required.', 'error');
-      return;
-    }
-
-    const sequence = sitReps.length + 1;
-    const id = `SR${String(sequence).padStart(3, '0')}`;
-    const record: SitRep = {
-      id,
-      sitRepNo: `SITREP-${new Date().getFullYear()}-${String(sequence).padStart(3, '0')}`,
-      eventId: event.id,
-      operationalPeriodId: period.id,
-      affectedAreas: splitLines(editor.affectedAreas),
-      ...numbers,
-      lifelinesStatus: [],
-      immediateNeeds: splitLines(editor.immediateNeeds),
-      actionsTaken: splitLines(editor.actionsTaken),
-      preparedBy: currentRole?.label ?? 'DRRM Focal',
-      version: 1,
-      status: 'Draft',
-      workflowHistory: [],
-      createdAt: now,
-      updatedAt: now,
-    };
-    setSitReps(previous => [...previous, record]);
-    setExpandedId(record.id);
-    logEvent({
-      action: 'Created',
-      module: 'DRRM',
-      recordId: record.id,
-      recordLabel: record.sitRepNo,
-      description: `Created ${record.sitRepNo} as a Draft.`,
-    });
-    showToast(`${record.sitRepNo} created as Draft.`);
-    setEditor(null);
-  }
-
-  function handleTransition(
-    sitRep: SitRep,
-    action: DRRMWorkflowAction,
-    remarks?: string,
-  ) {
-    try {
-      const result = applyDRRMWorkflowTransition({
-        status: sitRep.status,
-        history: sitRep.workflowHistory,
-        action,
-        roleId,
-        performedBy: currentRole?.label ?? 'Unknown User',
-        remarks,
-        validationIssues: validateSitRepForReview(sitRep),
-      });
-      const now = new Date().toISOString();
-      setSitReps(previous => previous.map(record => record.id === sitRep.id ? {
-        ...record,
-        status: result.status,
-        workflowHistory: result.workflowHistory,
-        submittedBy: result.status === 'Submitted'
-          ? currentRole?.label
-          : record.submittedBy,
-        updatedAt: now,
-      } : record));
-      logEvent({
-        action: action === 'approve' ? 'Approved'
-          : action === 'return' ? 'Returned'
-          : action === 'submit' ? 'Submitted'
-          : 'Validated',
-        module: 'DRRM',
-        recordId: sitRep.id,
-        recordLabel: sitRep.sitRepNo,
-        description: `${result.workflowHistory[result.workflowHistory.length - 1]?.actionLabel}: ${sitRep.sitRepNo}`,
-      });
-      showToast(`${sitRep.sitRepNo} moved to ${result.status}.`);
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Workflow action failed.', 'error');
-    }
-  }
+  const handleSubmit = (id: string) => {
+    setSubmittingId(id);
+    setTimeout(() => setSubmittingId(null), 2000);
+  };
 
   const eventName = (sitRep: SitRep) => getDisasterEvent(sitRep.eventId)?.name ?? 'Unknown event';
   const periodLabel = (sitRep: SitRep) => {
@@ -235,16 +54,11 @@ export function SitRepBuilderPage() {
       breadcrumbs={[{ label: 'DRRM' }, { label: 'SitRep' }]}
       moduleTag="DRRM"
       priorityTag="P0"
-      actions={roleId === 'drrm_focal' ? (
-        <Button size="sm" variant="primary" onClick={() => openEditor()}>
-          <Plus size={14} /> New SitRep
-        </Button>
-      ) : undefined}
     >
       {/* List View */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden mb-6">
-        <DataTable columns={columns} data={sitReps} rowKey={s => s.id} />
-        {sitReps.length === 0 && (
+        <DataTable columns={columns} data={mockSitReps} rowKey={s => s.id} />
+        {mockSitReps.length === 0 && (
           <div className="p-8 text-center text-slate-500">
             <p className="text-sm">No SitReps created yet.</p>
           </div>
@@ -254,7 +68,7 @@ export function SitRepBuilderPage() {
       {/* Expanded Detail View */}
       {expandedId && (
         <div className="space-y-6">
-          {sitReps
+          {mockSitReps
             .filter(s => s.id === expandedId)
             .map(sitRep => (
               <Card key={sitRep.id}>
@@ -374,68 +188,23 @@ export function SitRepBuilderPage() {
                     )}
                   </div>
 
-                  <DRRMWorkflowPanel
-                    status={sitRep.status}
-                    history={sitRep.workflowHistory}
-                    validationIssues={validateSitRepForReview(sitRep)}
-                    onTransition={(action, remarks) => handleTransition(sitRep, action, remarks)}
-                  />
-
-                  {roleId === 'drrm_focal' && ['Draft', 'Returned'].includes(sitRep.status) && (
-                    <Button variant="secondary" onClick={() => openEditor(sitRep)}>
-                      <Pencil size={15} /> Edit Draft Data
-                    </Button>
+                  {/* Submit Button */}
+                  {sitRep.status !== 'Archived' && sitRep.status !== 'Approved' && (
+                    <div className="pt-4 border-t border-slate-200">
+                      <Button
+                        onClick={() => handleSubmit(sitRep.id)}
+                        className="flex items-center gap-2 bg-forest hover:bg-forest-dark text-white"
+                      >
+                        <Send size={16} />
+                        {submittingId === sitRep.id ? 'Submitting...' : 'Submit Report'}
+                      </Button>
+                    </div>
                   )}
                 </div>
               </Card>
             ))}
         </div>
       )}
-
-      <Modal
-        isOpen={editor !== null}
-        onClose={() => setEditor(null)}
-        title={editor?.id ? 'Edit SitRep Draft' : 'Create SitRep Draft'}
-        size="lg"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setEditor(null)}>Cancel</Button>
-            <Button variant="primary" onClick={saveEditor}>Save Draft</Button>
-          </div>
-        }
-      >
-        {editor && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FormField label="Affected Areas" required hint="Separate entries with commas.">
-              <Input
-                value={editor.affectedAreas}
-                onChange={event => setEditor({ ...editor, affectedAreas: event.target.value })}
-              />
-            </FormField>
-            <FormField label="Affected Families" required>
-              <Input type="number" min="0" value={editor.affectedFamilies} onChange={event => setEditor({ ...editor, affectedFamilies: event.target.value })} />
-            </FormField>
-            <FormField label="Affected Persons" required>
-              <Input type="number" min="0" value={editor.affectedPersons} onChange={event => setEditor({ ...editor, affectedPersons: event.target.value })} />
-            </FormField>
-            <FormField label="Casualties" required>
-              <Input type="number" min="0" value={editor.casualties} onChange={event => setEditor({ ...editor, casualties: event.target.value })} />
-            </FormField>
-            <FormField label="Injuries" required>
-              <Input type="number" min="0" value={editor.injuries} onChange={event => setEditor({ ...editor, injuries: event.target.value })} />
-            </FormField>
-            <FormField label="Missing Persons" required>
-              <Input type="number" min="0" value={editor.missingPersons} onChange={event => setEditor({ ...editor, missingPersons: event.target.value })} />
-            </FormField>
-            <FormField label="Immediate Needs" hint="One item per line." >
-              <Textarea value={editor.immediateNeeds} onChange={event => setEditor({ ...editor, immediateNeeds: event.target.value })} rows={4} />
-            </FormField>
-            <FormField label="Actions Taken" hint="One item per line.">
-              <Textarea value={editor.actionsTaken} onChange={event => setEditor({ ...editor, actionsTaken: event.target.value })} rows={4} />
-            </FormField>
-          </div>
-        )}
-      </Modal>
     </PageScaffold>
   );
 }

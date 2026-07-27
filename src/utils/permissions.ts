@@ -12,7 +12,7 @@ const ROLE_PERMISSIONS: Record<RoleId, Permission[]> = {
     'documents.view', 'documents.approve', 'documents.release',
     'collections.view',
     'blotter.view', 'kp.view',
-    'drrm.view', 'drrm.approve', 'drrm.submit',
+    'drrm.view', 'drrm.submit',
     'gad.view', 'gad.submit',
     'reports.view', 'reports.export',
     'review.view',

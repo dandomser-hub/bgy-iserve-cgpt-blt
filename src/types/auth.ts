@@ -55,7 +55,6 @@ export type Permission =
   | 'drrm.view'
   | 'drrm.create'
   | 'drrm.edit'
-  | 'drrm.approve'
   | 'drrm.submit'
   | 'gad.view'
   | 'gad.create'

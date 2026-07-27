@@ -41,8 +41,7 @@ export const KP_TRANSITIONS: Record<KPStatus, KPStatus[]> = {
 // DRRM report transitions
 export const DRRM_REPORT_TRANSITIONS: Record<DRRMReportStatus, DRRMReportStatus[]> = {
   'Draft': ['For Review'],
-  'For Review': ['Approved', 'Returned'],
-  'Returned': ['For Review'],
+  'For Review': ['Approved', 'Draft'],
   'Approved': ['Exported', 'Submitted'],
   'Exported': ['Submitted', 'Archived'],
   'Submitted': ['Archived'],

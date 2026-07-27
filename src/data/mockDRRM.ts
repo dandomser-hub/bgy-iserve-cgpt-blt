@@ -508,7 +508,6 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     ],
     reportingDate: "2024-06-10",
     status: "Closed",
-    reportStatus: "Submitted",
     managedBy: "DRRM Focal Mangubat",
     locationType: "Inside Evacuation Center",
     householdEpisodes: [
@@ -561,7 +560,6 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Food packs", "Water", "Medicines"],
     reportingDate: "2024-06-10",
     status: "Closed",
-    reportStatus: "Approved",
     managedBy: "DRRM Focal Mangubat",
     locationType: "Inside Evacuation Center",
     householdEpisodes: [
@@ -588,7 +586,6 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Food", "Hygiene kits"],
     reportingDate: "2024-06-10",
     status: "Closed",
-    reportStatus: "Draft",
     managedBy: "DRRM Focal Mangubat",
     locationType: "Outside Evacuation Center",
     householdEpisodes: [
@@ -615,7 +612,6 @@ export const mockEvacuationRecords: EvacuationRecord[] = [
     needs: ["Temporary shelter support", "Food packs", "Livelihood assistance"],
     reportingDate: "2024-04-05",
     status: "Closed",
-    reportStatus: "Archived",
     managedBy: "DRRM Focal Mangubat",
     locationType: "Outside Evacuation Center",
     householdEpisodes: [
