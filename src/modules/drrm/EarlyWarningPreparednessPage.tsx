@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
-import { mockEarlyWarnings } from '@/data/mockDRRM';
+import { getDisasterEvent, getOperationalPeriod, mockEarlyWarnings } from '@/data/mockDRRM';
 import { formatDateTime } from '@/utils/formatters';
 
 export function EarlyWarningPreparednessPage() {
@@ -119,6 +119,8 @@ export function EarlyWarningPreparednessPage() {
 
               {/* Source & Issued By */}
               <div className="border-t border-current border-opacity-20 pt-3 space-y-1 text-xs opacity-75">
+                <p><span className="font-semibold">Event:</span> {getDisasterEvent(alert.eventId)?.name ?? 'Unknown event'}</p>
+                <p><span className="font-semibold">Operational period:</span> {getOperationalPeriod(alert.operationalPeriodId)?.periodNo ?? '—'}</p>
                 <p><span className="font-semibold">Source:</span> {alert.source}</p>
                 <p><span className="font-semibold">Issued by:</span> {alert.issuedBy}</p>
                 <p><span className="font-semibold">Date:</span> {formatDateTime(alert.issuedAt)}</p>

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
-import { mockDANARecords } from '@/data/mockDRRM';
+import { getDisasterEvent, getOperationalPeriod, mockDANARecords } from '@/data/mockDRRM';
 import type { DANARecord } from '@/types/drrm';
 import { formatDate, formatCurrency } from '@/utils/formatters';
 
@@ -31,7 +31,9 @@ export function DANAFormPage() {
                   <span className="font-mono text-sm">{dana.danaNo}</span>
                   <Badge variant="default" className="text-xs" label={dana.sector} />
                 </h3>
-                <p className="text-sm text-slate-600 mt-1">{dana.eventName} · {formatDate(dana.assessmentDate)}</p>
+                <p className="text-sm text-slate-600 mt-1">
+                  {getDisasterEvent(dana.eventId)?.name ?? 'Unknown event'} · {formatDate(dana.assessmentDate)}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
@@ -57,11 +59,15 @@ export function DANAFormPage() {
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Event Name</p>
-                    <p className="font-semibold text-slate-800">{dana.eventName}</p>
+                    <p className="font-semibold text-slate-800">{getDisasterEvent(dana.eventId)?.name ?? 'Unknown event'}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Sector</p>
-                    <p className="font-semibold text-slate-800">{dana.sector}</p>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Operational Period</p>
+                    <p className="font-semibold text-slate-800">
+                      {getOperationalPeriod(dana.operationalPeriodId)?.periodNo
+                        ? `Period ${getOperationalPeriod(dana.operationalPeriodId)?.periodNo}`
+                        : 'Unknown period'}
+                    </p>
                   </div>
                 </div>
 

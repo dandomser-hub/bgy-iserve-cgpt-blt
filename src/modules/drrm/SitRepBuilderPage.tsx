@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { StatusChip, Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { mockSitReps } from '@/data/mockDRRM';
+import { getDisasterEvent, getOperationalPeriod, mockSitReps } from '@/data/mockDRRM';
 import type { SitRep } from '@/types/drrm';
 import { formatDate, formatDateTime } from '@/utils/formatters';
 
@@ -20,11 +20,19 @@ export function SitRepBuilderPage() {
     setTimeout(() => setSubmittingId(null), 2000);
   };
 
+  const eventName = (sitRep: SitRep) => getDisasterEvent(sitRep.eventId)?.name ?? 'Unknown event';
+  const periodLabel = (sitRep: SitRep) => {
+    const period = getOperationalPeriod(sitRep.operationalPeriodId);
+    return period
+      ? `${formatDateTime(period.startsAt)} to ${formatDateTime(period.endsAt)}`
+      : 'Unknown operational period';
+  };
+
   // List view table columns
   const columns: Column<SitRep>[] = [
     { key: 'sitRepNo', header: 'SitRep No.', render: s => <span className="font-mono text-sm font-semibold">{s.sitRepNo}</span> },
-    { key: 'eventName', header: 'Event Name', render: s => s.eventName },
-    { key: 'reportingPeriod', header: 'Reporting Period', render: s => <span className="text-xs">{s.reportingPeriod}</span> },
+    { key: 'eventId', header: 'Event', render: s => eventName(s) },
+    { key: 'operationalPeriodId', header: 'Operational Period', render: s => <span className="text-xs">{periodLabel(s)}</span> },
     { key: 'version', header: 'Version', render: s => <Badge label={`v${s.version}`} variant="default" /> },
     { key: 'status', header: 'Status', render: s => <StatusChip status={s.status} /> },
     {
@@ -67,7 +75,7 @@ export function SitRepBuilderPage() {
                 <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                   <div>
                     <h3 className="text-lg font-bold text-slate-800">{sitRep.sitRepNo}</h3>
-                    <p className="text-sm text-slate-600 mt-1">{sitRep.eventName}</p>
+                    <p className="text-sm text-slate-600 mt-1">{eventName(sitRep)}</p>
                   </div>
                   <StatusChip status={sitRep.status} />
                 </div>
@@ -77,11 +85,11 @@ export function SitRepBuilderPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Event Name</p>
-                      <p className="font-semibold text-slate-800">{sitRep.eventName}</p>
+                      <p className="font-semibold text-slate-800">{eventName(sitRep)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Reporting Period</p>
-                      <p className="font-semibold text-slate-800 text-sm">{sitRep.reportingPeriod}</p>
+                      <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Operational Period</p>
+                      <p className="font-semibold text-slate-800 text-sm">{periodLabel(sitRep)}</p>
                     </div>
                     <div>
                       <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Version</p>
