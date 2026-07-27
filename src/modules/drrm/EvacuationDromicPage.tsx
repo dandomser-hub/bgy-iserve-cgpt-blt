@@ -1,4 +1,4 @@
-import { Users, MapPin, Clock } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
@@ -9,6 +9,11 @@ import {
   mockEvacuationRecords,
 } from '@/data/mockDRRM';
 import { formatDate } from '@/utils/formatters';
+import {
+  DROMIC_AGE_BANDS,
+  evaluateDROMICProfile,
+  sumSexDisaggregatedCount,
+} from '@/utils/dromic';
 
 export function EvacuationDromicPage() {
   const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
@@ -51,7 +56,11 @@ export function EvacuationDromicPage() {
 
       {/* Evacuation Centers Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {mockEvacuationRecords.map(center => (
+        {mockEvacuationRecords.map(center => {
+          const profileSummary = evaluateDROMICProfile(center);
+          const profile = center.disaggregatedPopulation;
+
+          return (
           <Card key={center.id} className={center.status === 'Open' ? 'border-sky-200 border-2' : ''}>
             <div className="p-6 bg-gradient-to-br from-sky-50 to-blue-50 border-b border-slate-200">
               <div className="flex items-start justify-between mb-3">
@@ -83,34 +92,122 @@ export function EvacuationDromicPage() {
             </div>
 
             <div className="p-6 space-y-5">
-              {/* Demographics Breakdown */}
+              {/* DROMIC Disaggregation */}
               <div>
-                <div className="mb-4">
+                <div className="mb-4 flex flex-wrap items-center gap-2">
                   <Badge label={center.locationType} variant="default" className="text-xs" />
+                  {center.locationType === 'Inside Evacuation Center' && (
+                    <Badge
+                      label={profileSummary.annexExportReady ? 'Annex C/D ready' : 'Reconciliation required'}
+                      className={
+                        profileSummary.annexExportReady
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-amber-100 text-amber-700'
+                      }
+                    />
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">Demographics Breakdown</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-sm text-slate-700">Males</span>
-                    <span className="font-bold text-slate-800">{center.males}</span>
+                <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold mb-3">
+                  Sex and age distribution
+                </p>
+                {profile ? (
+                  <>
+                    <div className="overflow-x-auto border border-slate-200 rounded">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-100 text-slate-600">
+                          <tr>
+                            <th className="text-left p-2">Age group</th>
+                            <th className="text-right p-2">Male</th>
+                            <th className="text-right p-2">Female</th>
+                            <th className="text-right p-2">Not reported</th>
+                            <th className="text-right p-2">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {DROMIC_AGE_BANDS.map(({ key, label }) => {
+                            const count = profile.ageSex[key];
+                            return (
+                              <tr key={key} className="border-t border-slate-200">
+                                <td className="p-2 text-slate-700">{label}</td>
+                                <td className="p-2 text-right font-medium">{count.male}</td>
+                                <td className="p-2 text-right font-medium">{count.female}</td>
+                                <td className="p-2 text-right font-medium">{count.notReported}</td>
+                                <td className="p-2 text-right font-bold">
+                                  {sumSexDisaggregatedCount(count)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot className="bg-slate-50 border-t-2 border-slate-300">
+                          <tr>
+                            <td className="p-2 font-semibold">Total</td>
+                            <td className="p-2 text-right font-bold">{profileSummary.ageSex.male}</td>
+                            <td className="p-2 text-right font-bold">{profileSummary.ageSex.female}</td>
+                            <td className="p-2 text-right font-bold">{profileSummary.ageSex.notReported}</td>
+                            <td className="p-2 text-right font-bold">{profileSummary.ageSex.total}</td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-sm text-slate-700">Children (under 18)</span>
+                        <span className="font-bold text-slate-800">{profileSummary.children}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-sm text-slate-700">Elderly (60+)</span>
+                        <span className="font-bold text-slate-800">{profileSummary.elderly}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-sm text-slate-700">Pregnant women</span>
+                        <span className="font-bold text-slate-800">{profile.sectoral.pregnantWomen}</span>
+                      </div>
+                      <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-sm text-slate-700">Lactating mothers</span>
+                        <span className="font-bold text-slate-800">{profile.sectoral.lactatingMothers}</span>
+                      </div>
+                      <div className="col-span-2 flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
+                        <span className="text-sm text-slate-700">Persons with disability</span>
+                        <span className="font-bold text-slate-800">{profileSummary.personsWithDisability}</span>
+                      </div>
+                    </div>
+
+                    <div
+                      className={`mt-3 flex gap-2 rounded border p-3 ${
+                        profileSummary.issues.length === 0
+                          ? 'border-green-200 bg-green-50 text-green-800'
+                          : 'border-amber-200 bg-amber-50 text-amber-800'
+                      }`}
+                    >
+                      {profileSummary.issues.length === 0 ? (
+                        <CheckCircle2 size={16} className="mt-0.5 shrink-0" />
+                      ) : (
+                        <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                      )}
+                      <div className="text-xs">
+                        <p className="font-semibold">
+                          {profileSummary.issues.length === 0
+                            ? 'Population totals reconciled'
+                            : 'Data quality review required'}
+                        </p>
+                        {profileSummary.issues.map(issue => (
+                          <p key={issue} className="mt-1">{issue}</p>
+                        ))}
+                        <p className="mt-1">
+                          Source: {profile.source} · Status: {profile.dataQualityStatus}
+                        </p>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded text-sm text-slate-600">
+                    Outside-EC families and persons remain separately counted. A disaggregated
+                    profile has not been captured for this record and is not presented as DROMIC
+                    Annex C/D-ready.
                   </div>
-                  <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-sm text-slate-700">Females</span>
-                    <span className="font-bold text-slate-800">{center.females}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-sm text-slate-700">Children</span>
-                    <span className="font-bold text-slate-800">{center.children}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-sm text-slate-700">Seniors</span>
-                    <span className="font-bold text-slate-800">{center.seniors}</span>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-200">
-                    <span className="text-sm text-slate-700">PWD</span>
-                    <span className="font-bold text-slate-800">{center.pwdCount}</span>
-                  </div>
-                </div>
+                )}
               </div>
 
               <div className="p-3 bg-slate-50 border border-slate-200 rounded">
@@ -163,7 +260,8 @@ export function EvacuationDromicPage() {
               </div>
             </div>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {/* Empty State */}
