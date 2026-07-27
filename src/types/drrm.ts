@@ -1,6 +1,29 @@
 export type AlertSeverity = 'Low' | 'Moderate' | 'High' | 'Critical';
 export type AlertType = 'Typhoon' | 'Flooding' | 'Landslide' | 'Earthquake' | 'Fire' | 'Drought' | 'Storm Surge' | 'Other';
-export type DRRMReportStatus = 'Draft' | 'For Review' | 'Approved' | 'Exported' | 'Submitted' | 'Archived';
+export type DRRMReportStatus =
+  | 'Draft'
+  | 'For Review'
+  | 'Returned'
+  | 'Approved'
+  | 'Exported'
+  | 'Submitted'
+  | 'Archived';
+export type DRRMWorkflowAction =
+  | 'submit-for-review'
+  | 'approve'
+  | 'return'
+  | 'submit';
+
+export interface DRRMWorkflowHistoryEntry {
+  id: string;
+  action: DRRMWorkflowAction;
+  actionLabel: string;
+  fromStatus: DRRMReportStatus;
+  toStatus: DRRMReportStatus;
+  performedBy: string;
+  performedAt: string;
+  remarks?: string;
+}
 export type RiskLevel = 'Low' | 'Moderate' | 'High' | 'Very High';
 export type ResourceCondition = 'Good' | 'Fair' | 'Poor' | 'For Repair' | 'Condemned';
 export type ResourceAvailability = 'Available' | 'Deployed' | 'In Maintenance' | 'Unavailable';
@@ -161,6 +184,7 @@ export interface SitRep extends DRRMOperationalContext {
   submittedBy?: string;
   version: number;
   status: DRRMReportStatus;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   createdAt: string;
   updatedAt: string;
 }
@@ -179,6 +203,7 @@ export interface DANARecord extends DRRMOperationalContext {
   assessedBy: string;
   evidenceNotes?: string;
   status: DRRMReportStatus;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   createdAt: string;
 }
 
@@ -205,6 +230,8 @@ export interface EvacuationRecord extends DRRMOperationalContext {
   needs: string[];
   reportingDate: string;
   status: 'Open' | 'Closed' | 'Stand-by';
+  reportStatus: DRRMReportStatus;
+  workflowHistory?: DRRMWorkflowHistoryEntry[];
   managedBy: string;
   locationType: 'Inside Evacuation Center' | 'Outside Evacuation Center';
   householdEpisodes: DisplacementEpisode[];

@@ -1,14 +1,206 @@
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
+import { useAudit } from '@/app/providers/AuditProvider';
+import { useMockData } from '@/app/providers/MockDataProvider';
+import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
+import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
 import { StatusChip, Badge } from '@/components/ui/Badge';
-import { getDisasterEvent, getOperationalPeriod, mockDANARecords } from '@/data/mockDRRM';
-import type { DANARecord } from '@/types/drrm';
+import { Button } from '@/components/ui/Button';
+import { FormField, Input, Select, Textarea } from '@/components/ui/FormField';
+import { Modal } from '@/components/ui/Modal';
+import {
+  getDisasterEvent,
+  getOperationalPeriod,
+  mockDisasterEvents,
+  mockOperationalPeriods,
+} from '@/data/mockDRRM';
+import type { DANARecord, DRRMWorkflowAction } from '@/types/drrm';
 import { formatDate, formatCurrency } from '@/utils/formatters';
+import {
+  applyDRRMWorkflowTransition,
+  validateDANAForReview,
+} from '@/utils/drrmWorkflow';
+
+type DANAEditor = {
+  id?: string;
+  assessmentDate: string;
+  sector: string;
+  affectedHouseholds: string;
+  affectedPersons: string;
+  damageDescription: string;
+  estimatedDamage: string;
+  immediateNeeds: string;
+  evidenceNotes: string;
+};
+
+const DANA_SECTORS = ['Housing', 'Agriculture', 'Infrastructure', 'Livelihood / Commerce', 'Health', 'Education', 'Other'];
+
+function splitLines(value: string): string[] {
+  return value.split(/\n|,/).map(item => item.trim()).filter(Boolean);
+}
 
 export function DANAFormPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { danaRecords, setDANARecords, showToast } = useMockData();
+  const { roleId } = useRole();
+  const currentRole = useCurrentRole();
+  const { logEvent } = useAudit();
+  const [editor, setEditor] = useState<DANAEditor | null>(null);
+
+  function openEditor(record?: DANARecord) {
+    setEditor(record ? {
+      id: record.id,
+      assessmentDate: record.assessmentDate,
+      sector: record.sector,
+      affectedHouseholds: String(record.affectedHouseholds),
+      affectedPersons: String(record.affectedPersons),
+      damageDescription: record.damageDescription,
+      estimatedDamage: String(record.estimatedDamage),
+      immediateNeeds: record.immediateNeeds.join('\n'),
+      evidenceNotes: record.evidenceNotes ?? '',
+    } : {
+      assessmentDate: new Date().toISOString().slice(0, 10),
+      sector: DANA_SECTORS[0],
+      affectedHouseholds: '0',
+      affectedPersons: '0',
+      damageDescription: '',
+      estimatedDamage: '0',
+      immediateNeeds: '',
+      evidenceNotes: '',
+    });
+  }
+
+  function saveEditor() {
+    if (!editor) return;
+    const affectedHouseholds = Number(editor.affectedHouseholds);
+    const affectedPersons = Number(editor.affectedPersons);
+    const estimatedDamage = Number(editor.estimatedDamage);
+    if (
+      !editor.assessmentDate ||
+      !editor.sector.trim() ||
+      !editor.damageDescription.trim() ||
+      !Number.isInteger(affectedHouseholds) ||
+      affectedHouseholds < 0 ||
+      !Number.isInteger(affectedPersons) ||
+      affectedPersons < 0 ||
+      !Number.isFinite(estimatedDamage) ||
+      estimatedDamage < 0
+    ) {
+      showToast('Complete the required DANA fields with valid non-negative values.', 'error');
+      return;
+    }
+
+    if (editor.id) {
+      setDANARecords(previous => previous.map(record => record.id === editor.id ? {
+        ...record,
+        assessmentDate: editor.assessmentDate,
+        sector: editor.sector,
+        affectedHouseholds,
+        affectedPersons,
+        damageDescription: editor.damageDescription.trim(),
+        estimatedDamage,
+        immediateNeeds: splitLines(editor.immediateNeeds),
+        evidenceNotes: editor.evidenceNotes.trim() || undefined,
+        validationStatus: 'Pending',
+      } : record));
+      logEvent({
+        action: 'Updated',
+        module: 'DRRM',
+        recordId: editor.id,
+        recordLabel: danaRecords.find(record => record.id === editor.id)?.danaNo,
+        description: 'Updated a Draft or Returned DANA assessment before validation.',
+      });
+      showToast('DANA changes saved and marked Pending validation.');
+      setEditor(null);
+      return;
+    }
+
+    const event = mockDisasterEvents.find(
+      item => item.status !== 'Archived' && item.status !== 'Closed',
+    );
+    const period = event
+      ? mockOperationalPeriods.find(item => item.eventId === event.id && item.status === 'Active')
+      : undefined;
+    if (!event || !period) {
+      showToast('An active disaster event and operational period are required.', 'error');
+      return;
+    }
+
+    const sequence = danaRecords.length + 1;
+    const record: DANARecord = {
+      id: `DANA${String(sequence).padStart(3, '0')}`,
+      danaNo: `DANA-${new Date().getFullYear()}-${String(sequence).padStart(3, '0')}`,
+      eventId: event.id,
+      operationalPeriodId: period.id,
+      assessmentDate: editor.assessmentDate,
+      sector: editor.sector,
+      affectedHouseholds,
+      affectedPersons,
+      damageDescription: editor.damageDescription.trim(),
+      estimatedDamage,
+      immediateNeeds: splitLines(editor.immediateNeeds),
+      validationStatus: 'Pending',
+      assessedBy: currentRole?.label ?? 'DRRM Focal',
+      evidenceNotes: editor.evidenceNotes.trim() || undefined,
+      status: 'Draft',
+      workflowHistory: [],
+      createdAt: new Date().toISOString(),
+    };
+    setDANARecords(previous => [...previous, record]);
+    setExpandedId(record.id);
+    logEvent({
+      action: 'Created',
+      module: 'DRRM',
+      recordId: record.id,
+      recordLabel: record.danaNo,
+      description: `Created ${record.danaNo} as a Draft.`,
+    });
+    showToast(`${record.danaNo} created as Draft.`);
+    setEditor(null);
+  }
+
+  function handleTransition(
+    dana: DANARecord,
+    action: DRRMWorkflowAction,
+    remarks?: string,
+  ) {
+    try {
+      const result = applyDRRMWorkflowTransition({
+        status: dana.status,
+        history: dana.workflowHistory,
+        action,
+        roleId,
+        performedBy: currentRole?.label ?? 'Unknown User',
+        remarks,
+        validationIssues: validateDANAForReview(dana),
+      });
+      setDANARecords(previous => previous.map(record => record.id === dana.id ? {
+        ...record,
+        status: result.status,
+        validationStatus: action === 'submit-for-review'
+          ? 'Validated'
+          : action === 'return'
+            ? 'Returned'
+            : record.validationStatus,
+        workflowHistory: result.workflowHistory,
+      } : record));
+      logEvent({
+        action: action === 'approve' ? 'Approved'
+          : action === 'return' ? 'Returned'
+          : action === 'submit' ? 'Submitted'
+          : 'Validated',
+        module: 'DRRM',
+        recordId: dana.id,
+        recordLabel: dana.danaNo,
+        description: `${result.workflowHistory[result.workflowHistory.length - 1]?.actionLabel}: ${dana.danaNo}`,
+      });
+      showToast(`${dana.danaNo} moved to ${result.status}.`);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Workflow action failed.', 'error');
+    }
+  }
 
   return (
     <PageScaffold
@@ -17,10 +209,15 @@ export function DANAFormPage() {
       breadcrumbs={[{ label: 'DRRM' }, { label: 'DANA' }]}
       moduleTag="DRRM"
       priorityTag="P0"
+      actions={roleId === 'drrm_focal' ? (
+        <Button size="sm" variant="primary" onClick={() => openEditor()}>
+          <Plus size={14} /> New DANA
+        </Button>
+      ) : undefined}
     >
       {/* DANA Records List */}
       <div className="grid grid-cols-1 gap-4">
-        {mockDANARecords.map(dana => (
+        {danaRecords.map(dana => (
           <Card key={dana.id}>
             <div
               onClick={() => setExpandedId(expandedId === dana.id ? null : dana.id)}
@@ -133,6 +330,19 @@ export function DANAFormPage() {
                     <p className="text-sm text-blue-900">{dana.evidenceNotes}</p>
                   </div>
                 )}
+
+                <DRRMWorkflowPanel
+                  status={dana.status}
+                  history={dana.workflowHistory}
+                  validationIssues={validateDANAForReview(dana)}
+                  onTransition={(action, remarks) => handleTransition(dana, action, remarks)}
+                />
+
+                {roleId === 'drrm_focal' && ['Draft', 'Returned'].includes(dana.status) && (
+                  <Button variant="secondary" onClick={() => openEditor(dana)}>
+                    <Pencil size={15} /> Edit Assessment
+                  </Button>
+                )}
               </div>
             )}
           </Card>
@@ -140,11 +350,57 @@ export function DANAFormPage() {
       </div>
 
       {/* Empty State */}
-      {mockDANARecords.length === 0 && (
+      {danaRecords.length === 0 && (
         <Card className="text-center py-12 bg-slate-50 border-slate-200">
           <p className="text-slate-600 font-medium">No DANA records found</p>
         </Card>
       )}
+
+      <Modal
+        isOpen={editor !== null}
+        onClose={() => setEditor(null)}
+        title={editor?.id ? 'Edit DANA Assessment' : 'Create DANA Assessment'}
+        size="lg"
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setEditor(null)}>Cancel</Button>
+            <Button variant="primary" onClick={saveEditor}>Save Draft</Button>
+          </div>
+        }
+      >
+        {editor && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField label="Assessment Date" required>
+              <Input type="date" value={editor.assessmentDate} onChange={event => setEditor({ ...editor, assessmentDate: event.target.value })} />
+            </FormField>
+            <FormField label="Sector" required>
+              <Select value={editor.sector} onChange={event => setEditor({ ...editor, sector: event.target.value })}>
+                {DANA_SECTORS.map(sector => <option key={sector} value={sector}>{sector}</option>)}
+              </Select>
+            </FormField>
+            <FormField label="Affected Households" required>
+              <Input type="number" min="0" value={editor.affectedHouseholds} onChange={event => setEditor({ ...editor, affectedHouseholds: event.target.value })} />
+            </FormField>
+            <FormField label="Affected Persons" required>
+              <Input type="number" min="0" value={editor.affectedPersons} onChange={event => setEditor({ ...editor, affectedPersons: event.target.value })} />
+            </FormField>
+            <FormField label="Estimated Damage (PHP)" required>
+              <Input type="number" min="0" step="0.01" value={editor.estimatedDamage} onChange={event => setEditor({ ...editor, estimatedDamage: event.target.value })} />
+            </FormField>
+            <div className="md:col-span-2">
+              <FormField label="Damage Description" required>
+                <Textarea value={editor.damageDescription} onChange={event => setEditor({ ...editor, damageDescription: event.target.value })} rows={4} />
+              </FormField>
+            </div>
+            <FormField label="Immediate Needs" hint="One item per line.">
+              <Textarea value={editor.immediateNeeds} onChange={event => setEditor({ ...editor, immediateNeeds: event.target.value })} rows={4} />
+            </FormField>
+            <FormField label="Evidence Notes">
+              <Textarea value={editor.evidenceNotes} onChange={event => setEditor({ ...editor, evidenceNotes: event.target.value })} rows={4} />
+            </FormField>
+          </div>
+        )}
+      </Modal>
     </PageScaffold>
   );
 }
