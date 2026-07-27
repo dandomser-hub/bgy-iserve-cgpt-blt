@@ -12,6 +12,48 @@ export interface PopulationCount {
   persons: number;
 }
 
+export interface SexDisaggregatedCount {
+  male: number;
+  female: number;
+  notReported: number;
+}
+
+export interface DROMICAgeSexDistribution {
+  infant0To6Months: SexDisaggregatedCount;
+  toddler7MonthsTo2Years: SexDisaggregatedCount;
+  preschool3To5Years: SexDisaggregatedCount;
+  schoolAge6To12Years: SexDisaggregatedCount;
+  teenage13To17Years: SexDisaggregatedCount;
+  adult18To59Years: SexDisaggregatedCount;
+  elderly60YearsAndAbove: SexDisaggregatedCount;
+}
+
+export interface DROMICSectoralDistribution {
+  pregnantWomen: number;
+  lactatingMothers: number;
+  childHeadedFamilies: SexDisaggregatedCount;
+  singleHeadedFamilies: SexDisaggregatedCount;
+  soloParents: SexDisaggregatedCount;
+  personsWithDisability: SexDisaggregatedCount;
+  indigenousPeoples: SexDisaggregatedCount;
+  fourPsBeneficiaries: SexDisaggregatedCount;
+}
+
+export type DROMICDataQualityStatus =
+  | 'Complete'
+  | 'Partial'
+  | 'For Validation';
+
+export interface DROMICDisaggregatedPopulation {
+  ageSex: DROMICAgeSexDistribution;
+  sectoral: DROMICSectoralDistribution;
+  dataQualityStatus: DROMICDataQualityStatus;
+  source: string;
+  collectedAt: string;
+  validatedAt?: string;
+  validatedBy?: string;
+}
+
 export interface DROMICPopulationSnapshot {
   affected: PopulationCount;
   currentDisplaced: {
@@ -158,11 +200,7 @@ export interface EvacuationRecord extends DRRMOperationalContext {
   address: string;
   displacedFamilies: number;
   displacedPersons: number;
-  males: number;
-  females: number;
-  children: number;
-  seniors: number;
-  pwdCount: number;
+  disaggregatedPopulation?: DROMICDisaggregatedPopulation;
   originPuroks: string[];
   needs: string[];
   reportingDate: string;
