@@ -58,6 +58,38 @@ export interface DRRMOperationalContext {
   operationalPeriodId: string;
 }
 
+export type DRRMRecordType =
+  | 'early-warning'
+  | 'sitrep'
+  | 'dana'
+  | 'evacuation'
+  | 'hazard-risk'
+  | 'resource'
+  | 'relief'
+  | 'bdrrmc-action';
+
+export interface DRRMRecordReference {
+  recordType: DRRMRecordType;
+  recordId: string;
+}
+
+export type DRRMRecordRelationType =
+  | 'informs'
+  | 'triggers'
+  | 'authorizes'
+  | 'supports'
+  | 'documents'
+  | 'assesses'
+  | 'updates';
+
+export interface DRRMRecordLink extends DRRMOperationalContext {
+  id: string;
+  source: DRRMRecordReference;
+  target: DRRMRecordReference;
+  relationType: DRRMRecordRelationType;
+  note: string;
+}
+
 export interface EarlyWarning extends DRRMOperationalContext {
   id: string;
   alertType: AlertType;

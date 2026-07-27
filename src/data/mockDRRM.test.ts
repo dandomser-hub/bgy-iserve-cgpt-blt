@@ -9,11 +9,15 @@ import {
   mockEvacuationRecords,
   mockHazardRisks,
   mockOperationalPeriods,
+  mockDRRMRecordLinks,
   mockReliefDistributions,
   mockSitReps,
   operationalPeriodById,
+  drrmRecordsByType,
+  getDRRMOperationalRecords,
+  getDRRMRecord,
 } from './mockDRRM';
-import type { DRRMOperationalContext } from '@/types/drrm';
+import type { DRRMOperationalContext, DRRMRecordType } from '@/types/drrm';
 
 const contextualRecords: DRRMOperationalContext[] = [
   ...mockEarlyWarnings,
@@ -89,5 +93,58 @@ describe('P0-02 DRRM domain foundation', () => {
         expect(episode.personDetailReason).toBeTruthy();
       }
     }
+  });
+});
+
+describe('P0-03 linked DRRM operations', () => {
+  it('uses unique relationship identifiers and resolvable endpoints', () => {
+    expect(new Set(mockDRRMRecordLinks.map(link => link.id)).size).toBe(
+      mockDRRMRecordLinks.length,
+    );
+
+    for (const link of mockDRRMRecordLinks) {
+      expect(getDRRMRecord(link.source), `Missing source for ${link.id}`).toBeDefined();
+      expect(getDRRMRecord(link.target), `Missing target for ${link.id}`).toBeDefined();
+      expect(link.source).not.toEqual(link.target);
+    }
+  });
+
+  it('prevents relationships from crossing disaster-event boundaries', () => {
+    for (const link of mockDRRMRecordLinks) {
+      const source = getDRRMRecord(link.source);
+      const target = getDRRMRecord(link.target);
+
+      expect(source?.eventId).toBe(link.eventId);
+      expect(target?.eventId).toBe(link.eventId);
+      expect(operationalPeriodById.get(link.operationalPeriodId)?.eventId).toBe(
+        link.eventId,
+      );
+    }
+  });
+
+  it('represents every operational record type in the relationship graph', () => {
+    const representedTypes = new Set<DRRMRecordType>();
+    for (const link of mockDRRMRecordLinks) {
+      representedTypes.add(link.source.recordType);
+      representedTypes.add(link.target.recordType);
+    }
+
+    expect(representedTypes).toEqual(
+      new Set(Object.keys(drrmRecordsByType) as DRRMRecordType[]),
+    );
+  });
+
+  it('builds event and operational-period views without leaking other contexts', () => {
+    const eventRecords = getDRRMOperationalRecords('DE001');
+    const periodRecords = getDRRMOperationalRecords('DE001', 'OP002');
+
+    expect(eventRecords.length).toBeGreaterThan(periodRecords.length);
+    expect(eventRecords.every(({ record }) => record.eventId === 'DE001')).toBe(true);
+    expect(
+      periodRecords.every(
+        ({ record }) =>
+          record.eventId === 'DE001' && record.operationalPeriodId === 'OP002',
+      ),
+    ).toBe(true);
   });
 });

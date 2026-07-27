@@ -1,4 +1,4 @@
-import { AlertTriangle, Users, FileText, Package, BarChart3, Truck, Radio } from 'lucide-react';
+import { AlertTriangle, Users, FileText, Package, BarChart3, Truck, Radio, Link2 } from 'lucide-react';
 import { Card, StatCard } from '@/components/ui/Card';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { StatusChip, Badge } from '@/components/ui/Badge';
@@ -12,7 +12,11 @@ import {
   mockBDRRMCActions,
   mockDisasterEvents,
   mockOperationalPeriods,
+  mockDRRMRecordLinks,
+  getDRRMOperationalRecords,
+  DRRM_RECORD_TYPE_LABELS,
 } from '@/data/mockDRRM';
+import type { DRRMRecordType } from '@/types/drrm';
 import { formatDateTime, formatDate } from '@/utils/formatters';
 
 export function DRRMDashboardPage() {
@@ -27,6 +31,21 @@ export function DRRMDashboardPage() {
   const pendingDANA = mockDANARecords.filter(d => d.status === 'Draft').length;
   const availableResources = mockDRRMResources.filter(r => r.availability === 'Available').length;
   const totalDistributions = mockReliefDistributions.length;
+  const currentEventRecords = currentEvent
+    ? getDRRMOperationalRecords(currentEvent.id)
+    : [];
+  const currentEventLinks = currentEvent
+    ? mockDRRMRecordLinks.filter(link => link.eventId === currentEvent.id)
+    : [];
+  const recordCounts = currentEventRecords.reduce(
+    (counts, { recordType }) => {
+      counts[recordType] += 1;
+      return counts;
+    },
+    Object.fromEntries(
+      Object.keys(DRRM_RECORD_TYPE_LABELS).map(recordType => [recordType, 0]),
+    ) as Record<DRRMRecordType, number>,
+  );
 
   return (
     <PageScaffold
@@ -111,6 +130,41 @@ export function DRRMDashboardPage() {
           color="slate"
         />
       </div>
+
+      {currentEvent && (
+        <Card className="mb-6">
+          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Link2 size={18} className="text-ocean" />
+                Linked Operational Picture
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Controlled records connected under {currentEvent.eventCode}
+              </p>
+            </div>
+            <Badge
+              label={`${currentEventLinks.length} verified links`}
+              className="bg-sky-100 text-sky-700"
+            />
+          </div>
+          <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {(Object.entries(DRRM_RECORD_TYPE_LABELS) as [DRRMRecordType, string][]).map(
+              ([recordType, label]) => (
+                <div
+                  key={recordType}
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                >
+                  <p className="text-2xl font-bold text-slate-800">
+                    {recordCounts[recordType]}
+                  </p>
+                  <p className="text-xs text-slate-600 mt-1">{label}</p>
+                </div>
+              ),
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">

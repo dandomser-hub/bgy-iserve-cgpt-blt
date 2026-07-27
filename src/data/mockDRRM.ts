@@ -9,6 +9,10 @@ import type {
   BDRRMCAction,
   DisasterEvent,
   OperationalPeriod,
+  DRRMOperationalContext,
+  DRRMRecordLink,
+  DRRMRecordReference,
+  DRRMRecordType,
 } from "@/types/drrm";
 
 export const mockDisasterEvents: DisasterEvent[] = [
@@ -915,3 +919,147 @@ export const mockBDRRMCActions: BDRRMCAction[] = [
     status: "Completed",
   },
 ];
+
+type DRRMRecord = DRRMOperationalContext & { id: string };
+
+export const DRRM_RECORD_TYPE_LABELS: Record<DRRMRecordType, string> = {
+  "early-warning": "Early Warnings",
+  sitrep: "Situation Reports",
+  dana: "DANA Assessments",
+  evacuation: "Evacuation & Displacement",
+  "hazard-risk": "Hazard & Risk Records",
+  resource: "Resources",
+  relief: "Relief Distributions",
+  "bdrrmc-action": "BDRRMC Actions",
+};
+
+export const drrmRecordsByType: Record<DRRMRecordType, DRRMRecord[]> = {
+  "early-warning": mockEarlyWarnings,
+  sitrep: mockSitReps,
+  dana: mockDANARecords,
+  evacuation: mockEvacuationRecords,
+  "hazard-risk": mockHazardRisks,
+  resource: mockDRRMResources,
+  relief: mockReliefDistributions,
+  "bdrrmc-action": mockBDRRMCActions,
+};
+
+export function getDRRMRecord(reference: DRRMRecordReference) {
+  return drrmRecordsByType[reference.recordType].find(
+    (record) => record.id === reference.recordId,
+  );
+}
+
+export function getDRRMOperationalRecords(
+  eventId: string,
+  operationalPeriodId?: string,
+) {
+  return (Object.entries(drrmRecordsByType) as [DRRMRecordType, DRRMRecord[]][])
+    .flatMap(([recordType, records]) =>
+      records.map((record) => ({ recordType, record })),
+    )
+    .filter(
+      ({ record }) =>
+        record.eventId === eventId &&
+        (!operationalPeriodId ||
+          record.operationalPeriodId === operationalPeriodId),
+    );
+}
+
+export const mockDRRMRecordLinks: DRRMRecordLink[] = [
+  {
+    ...context.emong1,
+    id: "LINK001",
+    source: { recordType: "hazard-risk", recordId: "HR001" },
+    target: { recordType: "early-warning", recordId: "EW002" },
+    relationType: "informs",
+    note: "Riverside flood-risk assessment informs the creek-level warning.",
+  },
+  {
+    ...context.emong1,
+    id: "LINK002",
+    source: { recordType: "bdrrmc-action", recordId: "BA001" },
+    target: { recordType: "early-warning", recordId: "EW001" },
+    relationType: "authorizes",
+    note: "Preparedness decisions authorize warning and evacuation actions.",
+  },
+  {
+    ...context.emong1,
+    id: "LINK003",
+    source: { recordType: "early-warning", recordId: "EW001" },
+    target: { recordType: "evacuation", recordId: "EV001" },
+    relationType: "triggers",
+    note: "Typhoon warning triggered the priority evacuation operation.",
+  },
+  {
+    ...context.emong1,
+    id: "LINK004",
+    source: { recordType: "resource", recordId: "RS003" },
+    target: { recordType: "relief", recordId: "RL001" },
+    relationType: "supports",
+    note: "Pre-positioned family food packs supported this distribution.",
+  },
+  {
+    ...context.emong1,
+    id: "LINK005",
+    source: { recordType: "evacuation", recordId: "EV001" },
+    target: { recordType: "relief", recordId: "RL001" },
+    relationType: "supports",
+    note: "The displaced household episode established the assistance context.",
+  },
+  {
+    ...context.emong1,
+    id: "LINK006",
+    source: { recordType: "relief", recordId: "RL001" },
+    target: { recordType: "sitrep", recordId: "SR001" },
+    relationType: "documents",
+    note: "The SitRep records relief delivered during the operational period.",
+  },
+  {
+    ...context.emong2,
+    id: "LINK007",
+    source: { recordType: "sitrep", recordId: "SR002" },
+    target: { recordType: "dana", recordId: "DANA001" },
+    relationType: "assesses",
+    note: "The housing assessment validates damage reported during response.",
+  },
+  {
+    ...context.emong3,
+    id: "LINK008",
+    source: { recordType: "dana", recordId: "DANA004" },
+    target: { recordType: "bdrrmc-action", recordId: "BA002" },
+    relationType: "informs",
+    note: "Infrastructure findings inform recovery decisions and assignments.",
+  },
+  {
+    ...context.fire1,
+    id: "LINK009",
+    source: { recordType: "early-warning", recordId: "EW005" },
+    target: { recordType: "sitrep", recordId: "SR003" },
+    relationType: "updates",
+    note: "The fire alert and response status are consolidated in the SitRep.",
+  },
+];
+
+export function getLinkedDRRMRecords(reference: DRRMRecordReference) {
+  return mockDRRMRecordLinks
+    .filter(
+      (link) =>
+        (link.source.recordType === reference.recordType &&
+          link.source.recordId === reference.recordId) ||
+        (link.target.recordType === reference.recordType &&
+          link.target.recordId === reference.recordId),
+    )
+    .map((link) => {
+      const isSource =
+        link.source.recordType === reference.recordType &&
+        link.source.recordId === reference.recordId;
+      const relatedReference = isSource ? link.target : link.source;
+
+      return {
+        link,
+        relatedReference,
+        relatedRecord: getDRRMRecord(relatedReference),
+      };
+    });
+}
