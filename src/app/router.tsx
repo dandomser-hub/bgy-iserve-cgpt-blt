@@ -1,7 +1,10 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import { AppShell } from '@/layouts/AppShell';
 import { useRole } from '@/app/providers/RoleProvider';
 import { ROLE_HOME } from '@/utils/constants';
+import { RouteGuard } from '@/components/shared/RouteGuard';
+import type { RouteAccessId } from '@/utils/routeAccess';
 
 function RoleLandingRedirect() {
   const { roleId } = useRole();
@@ -9,8 +12,13 @@ function RoleLandingRedirect() {
   return <Navigate to={ROLE_HOME[roleId]} replace />;
 }
 
+function guard(routeId: RouteAccessId, element: ReactNode) {
+  return <RouteGuard routeId={routeId}>{element}</RouteGuard>;
+}
+
 // Auth
 import { RoleSelectorPage } from '@/modules/auth/RoleSelectorPage';
+import { AccessDeniedPage } from '@/modules/auth/AccessDeniedPage';
 
 // Dashboard
 import { ExecutiveDashboardPage } from '@/modules/dashboard/ExecutiveDashboardPage';
@@ -88,74 +96,75 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <RoleLandingRedirect /> },
-      { path: 'dashboard', element: <ExecutiveDashboardPage /> },
+      { path: 'access-denied', element: <AccessDeniedPage /> },
+      { path: 'dashboard', element: guard('dashboard', <ExecutiveDashboardPage />) },
 
       // Residents
-      { path: 'residents', element: <ResidentRegistryPage /> },
-      { path: 'residents/duplicates', element: <ResidentDuplicateReviewPage /> },
-      { path: 'residents/status-management', element: <ResidentStatusManagementPage /> },
-      { path: 'residents/:id', element: <ResidentProfilePage /> },
-      { path: 'households', element: <HouseholdRegistryPage /> },
+      { path: 'residents', element: guard('residents', <ResidentRegistryPage />) },
+      { path: 'residents/duplicates', element: guard('residentDuplicates', <ResidentDuplicateReviewPage />) },
+      { path: 'residents/status-management', element: guard('residentStatusManagement', <ResidentStatusManagementPage />) },
+      { path: 'residents/:id', element: guard('residentProfile', <ResidentProfilePage />) },
+      { path: 'households', element: guard('households', <HouseholdRegistryPage />) },
 
       // Documents
-      { path: 'documents/intake', element: <DocumentRequestIntakePage /> },
-      { path: 'documents/queue', element: <DocumentQueuePage /> },
-      { path: 'documents/templates', element: <DocumentTemplateManagerPage /> },
-      { path: 'documents/verification', element: <DocumentVerificationPage /> },
-      { path: 'documents/:id/workspace', element: <DocumentWorkspacePage /> },
-      { path: 'documents/:id/preview-release', element: <DocumentPreviewReleasePage /> },
+      { path: 'documents/intake', element: guard('documentIntake', <DocumentRequestIntakePage />) },
+      { path: 'documents/queue', element: guard('documentQueue', <DocumentQueuePage />) },
+      { path: 'documents/templates', element: guard('documentTemplates', <DocumentTemplateManagerPage />) },
+      { path: 'documents/verification', element: guard('documentVerification', <DocumentVerificationPage />) },
+      { path: 'documents/:id/workspace', element: guard('documentWorkspace', <DocumentWorkspacePage />) },
+      { path: 'documents/:id/preview-release', element: guard('documentPreviewRelease', <DocumentPreviewReleasePage />) },
 
       // Collections
-      { path: 'collections/reference-log', element: <CollectionReferenceLogPage /> },
-      { path: 'collections/daily-certification', element: <DailyCollectionCertificationPage /> },
-      { path: 'collections/fees-exemptions', element: <FeeTableExemptionPage /> },
+      { path: 'collections/reference-log', element: guard('collectionReferenceLog', <CollectionReferenceLogPage />) },
+      { path: 'collections/daily-certification', element: guard('collectionDailyCertification', <DailyCollectionCertificationPage />) },
+      { path: 'collections/fees-exemptions', element: guard('collectionFeesExemptions', <FeeTableExemptionPage />) },
 
       // Blotter & KP
-      { path: 'blotter', element: <BlotterRegistryPage /> },
-      { path: 'blotter/intake', element: <BlotterIntakePage /> },
-      { path: 'kp-cases', element: <KPCaseTrackerPage /> },
-      { path: 'kp/notices-schedule', element: <KPNoticesSchedulePage /> },
-      { path: 'kp/minutes-settlement', element: <KPMinutesSettlementPage /> },
+      { path: 'blotter', element: guard('blotterRegistry', <BlotterRegistryPage />) },
+      { path: 'blotter/intake', element: guard('blotterIntake', <BlotterIntakePage />) },
+      { path: 'kp-cases', element: guard('kpCases', <KPCaseTrackerPage />) },
+      { path: 'kp/notices-schedule', element: guard('kpNoticesSchedule', <KPNoticesSchedulePage />) },
+      { path: 'kp/minutes-settlement', element: guard('kpMinutesSettlement', <KPMinutesSettlementPage />) },
 
       // DRRM
-      { path: 'drrm', element: <DRRMDashboardPage /> },
-      { path: 'drrm/early-warning', element: <EarlyWarningPreparednessPage /> },
-      { path: 'drrm/sitrep', element: <SitRepBuilderPage /> },
-      { path: 'drrm/dana', element: <DANAFormPage /> },
-      { path: 'drrm/evacuation-dromic', element: <EvacuationDromicPage /> },
-      { path: 'drrm/hazard-risk', element: <HazardRiskRegisterPage /> },
-      { path: 'drrm/resources', element: <DRRMResourcesPage /> },
-      { path: 'drrm/relief-distribution', element: <ReliefDistributionPage /> },
-      { path: 'drrm/actions', element: <BDRRMCActionTrackerPage /> },
+      { path: 'drrm', element: guard('drrmDashboard', <DRRMDashboardPage />) },
+      { path: 'drrm/early-warning', element: guard('drrmEarlyWarning', <EarlyWarningPreparednessPage />) },
+      { path: 'drrm/sitrep', element: guard('drrmSitrep', <SitRepBuilderPage />) },
+      { path: 'drrm/dana', element: guard('drrmDana', <DANAFormPage />) },
+      { path: 'drrm/evacuation-dromic', element: guard('drrmEvacuationDromic', <EvacuationDromicPage />) },
+      { path: 'drrm/hazard-risk', element: guard('drrmHazardRisk', <HazardRiskRegisterPage />) },
+      { path: 'drrm/resources', element: guard('drrmResources', <DRRMResourcesPage />) },
+      { path: 'drrm/relief-distribution', element: guard('drrmReliefDistribution', <ReliefDistributionPage />) },
+      { path: 'drrm/actions', element: guard('drrmActions', <BDRRMCActionTrackerPage />) },
 
       // GAD
-      { path: 'gad', element: <GADDashboardPage /> },
-      { path: 'gad/annex-d1', element: <AnnexD1WorkspacePage /> },
-      { path: 'gad/annex-e1', element: <AnnexE1WorkspacePage /> },
-      { path: 'gad/activity-monitor', element: <GADActivityMonitorPage /> },
-      { path: 'gad/participants', element: <ParticipantLogPage /> },
-      { path: 'gad/budget-attribution', element: <GADBudgetAttributionPage /> },
+      { path: 'gad', element: guard('gadDashboard', <GADDashboardPage />) },
+      { path: 'gad/annex-d1', element: guard('gadAnnexD1', <AnnexD1WorkspacePage />) },
+      { path: 'gad/annex-e1', element: guard('gadAnnexE1', <AnnexE1WorkspacePage />) },
+      { path: 'gad/activity-monitor', element: guard('gadActivityMonitor', <GADActivityMonitorPage />) },
+      { path: 'gad/participants', element: guard('gadParticipants', <ParticipantLogPage />) },
+      { path: 'gad/budget-attribution', element: guard('gadBudgetAttribution', <GADBudgetAttributionPage />) },
 
       // Reports & Review
-      { path: 'reports', element: <ReportsExportCenterPage /> },
-      { path: 'review/municipal-city', element: <MunicipalReviewDashboardPage /> },
-      { path: 'review/comments', element: <ReviewerCommentLoopPage /> },
-      { path: 'compliance/sglgb', element: <ComplianceChecklistPage /> },
-      { path: 'data-quality', element: <DataQualityDashboardPage /> },
+      { path: 'reports', element: guard('reports', <ReportsExportCenterPage />) },
+      { path: 'review/municipal-city', element: guard('municipalReview', <MunicipalReviewDashboardPage />) },
+      { path: 'review/comments', element: guard('reviewComments', <ReviewerCommentLoopPage />) },
+      { path: 'compliance/sglgb', element: guard('complianceSglgb', <ComplianceChecklistPage />) },
+      { path: 'data-quality', element: guard('dataQuality', <DataQualityDashboardPage />) },
 
       // Admin
-      { path: 'admin/users-roles', element: <UserRoleAdminPage /> },
-      { path: 'admin/audit', element: <AuditTrailViewerPage /> },
-      { path: 'admin/backup-sync', element: <BackupSyncMonitorPage /> },
-      { path: 'admin/settings', element: <SettingsPage /> },
+      { path: 'admin/users-roles', element: guard('adminUsersRoles', <UserRoleAdminPage />) },
+      { path: 'admin/audit', element: guard('adminAudit', <AuditTrailViewerPage />) },
+      { path: 'admin/backup-sync', element: guard('adminBackupSync', <BackupSyncMonitorPage />) },
+      { path: 'admin/settings', element: guard('adminSettings', <SettingsPage />) },
 
       // Roadmap
-      { path: 'roadmap', element: <FutureModulesPage /> },
+      { path: 'roadmap', element: guard('roadmap', <FutureModulesPage />) },
       // Individual roadmap placeholders redirect to main roadmap
-      { path: 'roadmap/*', element: <FutureModulesPage /> },
+      { path: 'roadmap/*', element: guard('roadmap', <FutureModulesPage />) },
 
       // Attachments (placeholder)
-      { path: 'attachments', element: <Navigate to="/residents" replace /> },
+      { path: 'attachments', element: guard('attachments', <Navigate to="/residents" replace />) },
     ],
   },
 
