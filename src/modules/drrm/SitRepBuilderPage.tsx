@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAudit } from '@/app/providers/AuditProvider';
 import { useMockData } from '@/app/providers/MockDataProvider';
 import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
+import { DRRMReportEvidencePanel } from '@/components/shared/DRRMReportEvidencePanel';
 import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
@@ -23,6 +24,15 @@ import {
   applyDRRMWorkflowTransition,
   validateSitRepForReview,
 } from '@/utils/drrmWorkflow';
+import {
+  createInitialReportControl,
+  recordReportRevision,
+  retainReviewEvidence,
+} from '@/utils/drrmReportControl';
+import {
+  getBlockingReconciliationIssues,
+  reconcileSitRep,
+} from '@/utils/drrmReconciliation';
 
 type Lifeline = { lifeline: string; status: string };
 type SitRepEditor = {
@@ -97,14 +107,48 @@ export function SitRepBuilderPage() {
 
     const now = new Date().toISOString();
     if (editor.id) {
-      setSitReps(previous => previous.map(record => record.id === editor.id ? {
-        ...record,
-        ...numbers,
-        affectedAreas: splitLines(editor.affectedAreas),
-        immediateNeeds: splitLines(editor.immediateNeeds),
-        actionsTaken: splitLines(editor.actionsTaken),
-        updatedAt: now,
-      } : record));
+      setSitReps(previous => previous.map(record => {
+        if (record.id !== editor.id) return record;
+        const changedFields = [
+          'affectedAreas',
+          'affectedFamilies',
+          'affectedPersons',
+          'casualties',
+          'injuries',
+          'missingPersons',
+          'immediateNeeds',
+          'actionsTaken',
+        ];
+        const reportControl = recordReportRevision(record.reportControl, {
+          recordId: record.id,
+          actor: currentRole?.label ?? 'DRRM Focal',
+          capturedAt: now,
+          changedFields,
+          sourceReference: 'Barangay EOC SitRep correction',
+          evidenceReferences: [
+            getOperationalPeriod(record.operationalPeriodId)?.reportingCutoff
+              ?? record.operationalPeriodId,
+          ],
+          returnedCorrection: record.status === 'Returned',
+          snapshot: {
+            affectedAreas: splitLines(editor.affectedAreas),
+            ...numbers,
+            immediateNeeds: splitLines(editor.immediateNeeds),
+            actionsTaken: splitLines(editor.actionsTaken),
+            lifelinesStatus: record.lifelinesStatus,
+          },
+        });
+        return {
+          ...record,
+          ...numbers,
+          affectedAreas: splitLines(editor.affectedAreas),
+          immediateNeeds: splitLines(editor.immediateNeeds),
+          actionsTaken: splitLines(editor.actionsTaken),
+          version: reportControl.currentVersion,
+          reportControl,
+          updatedAt: now,
+        };
+      }));
       logEvent({
         action: 'Updated',
         module: 'DRRM',
@@ -142,6 +186,30 @@ export function SitRepBuilderPage() {
       actionsTaken: splitLines(editor.actionsTaken),
       preparedBy: currentRole?.label ?? 'DRRM Focal',
       version: 1,
+      reportControl: createInitialReportControl({
+        recordId: id,
+        actor: currentRole?.label ?? 'DRRM Focal',
+        capturedAt: now,
+        sourceReference: 'Barangay EOC SitRep encoding',
+        fieldPaths: [
+          'affectedAreas',
+          'affectedFamilies',
+          'affectedPersons',
+          'casualties',
+          'injuries',
+          'missingPersons',
+          'immediateNeeds',
+          'actionsTaken',
+        ],
+        evidenceReferences: [period.reportingCutoff],
+        snapshot: {
+          affectedAreas: splitLines(editor.affectedAreas),
+          ...numbers,
+          lifelinesStatus: [],
+          immediateNeeds: splitLines(editor.immediateNeeds),
+          actionsTaken: splitLines(editor.actionsTaken),
+        },
+      }),
       status: 'Draft',
       workflowHistory: [],
       createdAt: now,
@@ -166,6 +234,17 @@ export function SitRepBuilderPage() {
     remarks?: string,
   ) {
     try {
+      const now = new Date().toISOString();
+      const reconciliation = reconcileSitRep(
+        sitRep,
+        getDisasterEvent(sitRep.eventId),
+        currentRole?.label ?? 'Unknown User',
+        now,
+      );
+      const validationIssues = [
+        ...validateSitRepForReview(sitRep),
+        ...getBlockingReconciliationIssues(reconciliation),
+      ];
       const result = applyDRRMWorkflowTransition({
         status: sitRep.status,
         history: sitRep.workflowHistory,
@@ -173,13 +252,26 @@ export function SitRepBuilderPage() {
         roleId,
         performedBy: currentRole?.label ?? 'Unknown User',
         remarks,
-        validationIssues: validateSitRepForReview(sitRep),
+        validationIssues,
       });
-      const now = new Date().toISOString();
       setSitReps(previous => previous.map(record => record.id === sitRep.id ? {
         ...record,
         status: result.status,
         workflowHistory: result.workflowHistory,
+        reportControl: action === 'submit-for-review'
+          ? retainReviewEvidence(record.reportControl, {
+              recordId: record.id,
+              actor: currentRole?.label ?? 'Unknown User',
+              validatedAt: now,
+              validationIssues,
+              reconciliation,
+              evidenceReferences: [
+                getDisasterEvent(record.eventId)?.eventCode ?? record.eventId,
+                getOperationalPeriod(record.operationalPeriodId)?.reportingCutoff
+                  ?? record.operationalPeriodId,
+              ],
+            })
+          : record.reportControl,
         submittedBy: result.status === 'Submitted'
           ? currentRole?.label
           : record.submittedBy,
@@ -374,10 +466,28 @@ export function SitRepBuilderPage() {
                     )}
                   </div>
 
+                  <DRRMReportEvidencePanel
+                    control={sitRep.reportControl}
+                    liveReconciliation={reconcileSitRep(
+                      sitRep,
+                      getDisasterEvent(sitRep.eventId),
+                      currentRole?.label ?? 'Current Viewer',
+                      new Date().toISOString(),
+                    )}
+                  />
+
                   <DRRMWorkflowPanel
                     status={sitRep.status}
                     history={sitRep.workflowHistory}
-                    validationIssues={validateSitRepForReview(sitRep)}
+                    validationIssues={[
+                      ...validateSitRepForReview(sitRep),
+                      ...getBlockingReconciliationIssues(reconcileSitRep(
+                        sitRep,
+                        getDisasterEvent(sitRep.eventId),
+                        currentRole?.label ?? 'Current Viewer',
+                        new Date().toISOString(),
+                      )),
+                    ]}
                     onTransition={(action, remarks) => handleTransition(sitRep, action, remarks)}
                   />
 

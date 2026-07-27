@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, Clock, MapPin, Users } from 'lucide-react';
 import { useAudit } from '@/app/providers/AuditProvider';
 import { useMockData } from '@/app/providers/MockDataProvider';
 import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
+import { DRRMReportEvidencePanel } from '@/components/shared/DRRMReportEvidencePanel';
 import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +23,11 @@ import {
   applyDRRMWorkflowTransition,
   validateDROMICForReview,
 } from '@/utils/drrmWorkflow';
+import { retainReviewEvidence } from '@/utils/drrmReportControl';
+import {
+  getBlockingReconciliationIssues,
+  reconcileDROMIC,
+} from '@/utils/drrmReconciliation';
 
 export function EvacuationDromicPage() {
   const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
@@ -36,6 +42,16 @@ export function EvacuationDromicPage() {
     remarks?: string,
   ) {
     try {
+      const now = new Date().toISOString();
+      const reconciliation = reconcileDROMIC(
+        record,
+        currentRole?.label ?? 'Unknown User',
+        now,
+      );
+      const validationIssues = [
+        ...validateDROMICForReview(record),
+        ...getBlockingReconciliationIssues(reconciliation),
+      ];
       const result = applyDRRMWorkflowTransition({
         status: record.reportStatus,
         history: record.workflowHistory,
@@ -43,12 +59,26 @@ export function EvacuationDromicPage() {
         roleId,
         performedBy: currentRole?.label ?? 'Unknown User',
         remarks,
-        validationIssues: validateDROMICForReview(record),
+        validationIssues,
       });
       setEvacuationRecords(previous => previous.map(item => item.id === record.id ? {
         ...item,
         reportStatus: result.status,
         workflowHistory: result.workflowHistory,
+        reportControl: action === 'submit-for-review'
+          ? retainReviewEvidence(item.reportControl, {
+              recordId: item.id,
+              actor: currentRole?.label ?? 'Unknown User',
+              validatedAt: now,
+              validationIssues,
+              reconciliation,
+              evidenceReferences: [
+                item.disaggregatedPopulation?.source ?? 'Household displacement episodes',
+                getOperationalPeriod(item.operationalPeriodId)?.reportingCutoff
+                  ?? item.operationalPeriodId,
+              ],
+            })
+          : item.reportControl,
       } : item));
       logEvent({
         action: action === 'approve' ? 'Approved'
@@ -307,10 +337,26 @@ export function EvacuationDromicPage() {
                 </div>
               </div>
 
+              <DRRMReportEvidencePanel
+                control={center.reportControl}
+                liveReconciliation={reconcileDROMIC(
+                  center,
+                  currentRole?.label ?? 'Current Viewer',
+                  new Date().toISOString(),
+                )}
+              />
+
               <DRRMWorkflowPanel
                 status={center.reportStatus}
                 history={center.workflowHistory}
-                validationIssues={validateDROMICForReview(center)}
+                validationIssues={[
+                  ...validateDROMICForReview(center),
+                  ...getBlockingReconciliationIssues(reconcileDROMIC(
+                    center,
+                    currentRole?.label ?? 'Current Viewer',
+                    new Date().toISOString(),
+                  )),
+                ]}
                 onTransition={(action, remarks) => handleTransition(center, action, remarks)}
               />
             </div>

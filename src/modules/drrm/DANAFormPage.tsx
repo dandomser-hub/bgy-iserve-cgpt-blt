@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useAudit } from '@/app/providers/AuditProvider';
 import { useMockData } from '@/app/providers/MockDataProvider';
 import { useCurrentRole, useRole } from '@/app/providers/RoleProvider';
+import { DRRMReportEvidencePanel } from '@/components/shared/DRRMReportEvidencePanel';
 import { DRRMWorkflowPanel } from '@/components/shared/DRRMWorkflowPanel';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { Card } from '@/components/ui/Card';
@@ -22,6 +23,15 @@ import {
   applyDRRMWorkflowTransition,
   validateDANAForReview,
 } from '@/utils/drrmWorkflow';
+import {
+  createInitialReportControl,
+  recordReportRevision,
+  retainReviewEvidence,
+} from '@/utils/drrmReportControl';
+import {
+  getBlockingReconciliationIssues,
+  reconcileDANA,
+} from '@/utils/drrmReconciliation';
 
 type DANAEditor = {
   id?: string;
@@ -92,19 +102,56 @@ export function DANAFormPage() {
       return;
     }
 
+    const now = new Date().toISOString();
     if (editor.id) {
-      setDANARecords(previous => previous.map(record => record.id === editor.id ? {
-        ...record,
-        assessmentDate: editor.assessmentDate,
-        sector: editor.sector,
-        affectedHouseholds,
-        affectedPersons,
-        damageDescription: editor.damageDescription.trim(),
-        estimatedDamage,
-        immediateNeeds: splitLines(editor.immediateNeeds),
-        evidenceNotes: editor.evidenceNotes.trim() || undefined,
-        validationStatus: 'Pending',
-      } : record));
+      setDANARecords(previous => previous.map(record => {
+        if (record.id !== editor.id) return record;
+        const changedFields = [
+          'assessmentDate',
+          'sector',
+          'affectedHouseholds',
+          'affectedPersons',
+          'damageDescription',
+          'estimatedDamage',
+          'immediateNeeds',
+          'evidenceNotes',
+        ];
+        const evidenceReference = editor.evidenceNotes.trim() || 'Field DANA assessment update';
+        const reportControl = recordReportRevision(record.reportControl, {
+          recordId: record.id,
+          actor: currentRole?.label ?? 'DRRM Focal',
+          capturedAt: now,
+          changedFields,
+          sourceReference: evidenceReference,
+          sourceType: 'Field Observation',
+          evidenceReferences: editor.evidenceNotes.trim() ? [editor.evidenceNotes.trim()] : [],
+          returnedCorrection: record.status === 'Returned',
+          snapshot: {
+            assessmentDate: editor.assessmentDate,
+            sector: editor.sector,
+            affectedHouseholds,
+            affectedPersons,
+            damageDescription: editor.damageDescription.trim(),
+            estimatedDamage,
+            immediateNeeds: splitLines(editor.immediateNeeds),
+            evidenceNotes: editor.evidenceNotes.trim(),
+          },
+        });
+        return {
+          ...record,
+          assessmentDate: editor.assessmentDate,
+          sector: editor.sector,
+          affectedHouseholds,
+          affectedPersons,
+          damageDescription: editor.damageDescription.trim(),
+          estimatedDamage,
+          immediateNeeds: splitLines(editor.immediateNeeds),
+          evidenceNotes: editor.evidenceNotes.trim() || undefined,
+          validationStatus: 'Pending',
+          version: reportControl.currentVersion,
+          reportControl,
+        };
+      }));
       logEvent({
         action: 'Updated',
         module: 'DRRM',
@@ -144,9 +191,38 @@ export function DANAFormPage() {
       validationStatus: 'Pending',
       assessedBy: currentRole?.label ?? 'DRRM Focal',
       evidenceNotes: editor.evidenceNotes.trim() || undefined,
+      version: 1,
+      reportControl: createInitialReportControl({
+        recordId: `DANA${String(sequence).padStart(3, '0')}`,
+        actor: currentRole?.label ?? 'DRRM Focal',
+        capturedAt: now,
+        sourceReference: editor.evidenceNotes.trim() || 'Field DANA assessment',
+        sourceType: 'Field Observation',
+        fieldPaths: [
+          'assessmentDate',
+          'sector',
+          'affectedHouseholds',
+          'affectedPersons',
+          'damageDescription',
+          'estimatedDamage',
+          'immediateNeeds',
+          'evidenceNotes',
+        ],
+        evidenceReferences: editor.evidenceNotes.trim() ? [editor.evidenceNotes.trim()] : [],
+        snapshot: {
+          assessmentDate: editor.assessmentDate,
+          sector: editor.sector,
+          affectedHouseholds,
+          affectedPersons,
+          damageDescription: editor.damageDescription.trim(),
+          estimatedDamage,
+          immediateNeeds: splitLines(editor.immediateNeeds),
+          evidenceNotes: editor.evidenceNotes.trim(),
+        },
+      }),
       status: 'Draft',
       workflowHistory: [],
-      createdAt: new Date().toISOString(),
+      createdAt: now,
     };
     setDANARecords(previous => [...previous, record]);
     setExpandedId(record.id);
@@ -167,6 +243,16 @@ export function DANAFormPage() {
     remarks?: string,
   ) {
     try {
+      const now = new Date().toISOString();
+      const reconciliation = reconcileDANA(
+        dana,
+        currentRole?.label ?? 'Unknown User',
+        now,
+      );
+      const validationIssues = [
+        ...validateDANAForReview(dana),
+        ...getBlockingReconciliationIssues(reconciliation),
+      ];
       const result = applyDRRMWorkflowTransition({
         status: dana.status,
         history: dana.workflowHistory,
@@ -174,7 +260,7 @@ export function DANAFormPage() {
         roleId,
         performedBy: currentRole?.label ?? 'Unknown User',
         remarks,
-        validationIssues: validateDANAForReview(dana),
+        validationIssues,
       });
       setDANARecords(previous => previous.map(record => record.id === dana.id ? {
         ...record,
@@ -185,6 +271,20 @@ export function DANAFormPage() {
             ? 'Returned'
             : record.validationStatus,
         workflowHistory: result.workflowHistory,
+        reportControl: action === 'submit-for-review'
+          ? retainReviewEvidence(record.reportControl, {
+              recordId: record.id,
+              actor: currentRole?.label ?? 'Unknown User',
+              validatedAt: now,
+              validationIssues,
+              reconciliation,
+              evidenceReferences: [
+                record.evidenceNotes ?? 'No separate evidence note',
+                getOperationalPeriod(record.operationalPeriodId)?.reportingCutoff
+                  ?? record.operationalPeriodId,
+              ],
+            })
+          : record.reportControl,
       } : record));
       logEvent({
         action: action === 'approve' ? 'Approved'
@@ -266,6 +366,10 @@ export function DANAFormPage() {
                         : 'Unknown period'}
                     </p>
                   </div>
+                  <div>
+                    <p className="text-xs text-slate-500 uppercase tracking-wide mb-1">Version</p>
+                    <p className="font-semibold text-slate-800">v{dana.version}</p>
+                  </div>
                 </div>
 
                 {/* Affected Numbers */}
@@ -331,10 +435,26 @@ export function DANAFormPage() {
                   </div>
                 )}
 
+                <DRRMReportEvidencePanel
+                  control={dana.reportControl}
+                  liveReconciliation={reconcileDANA(
+                    dana,
+                    currentRole?.label ?? 'Current Viewer',
+                    new Date().toISOString(),
+                  )}
+                />
+
                 <DRRMWorkflowPanel
                   status={dana.status}
                   history={dana.workflowHistory}
-                  validationIssues={validateDANAForReview(dana)}
+                  validationIssues={[
+                    ...validateDANAForReview(dana),
+                    ...getBlockingReconciliationIssues(reconcileDANA(
+                      dana,
+                      currentRole?.label ?? 'Current Viewer',
+                      new Date().toISOString(),
+                    )),
+                  ]}
                   onTransition={(action, remarks) => handleTransition(dana, action, remarks)}
                 />
 
