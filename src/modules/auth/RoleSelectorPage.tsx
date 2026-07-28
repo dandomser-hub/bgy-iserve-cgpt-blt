@@ -61,7 +61,7 @@ export function RoleSelectorPage() {
       <div className="absolute inset-0 bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 opacity-[0.85]" />
 
       {/* ── Login Card ── */}
-      <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden opacity-90">
+      <div className="relative z-10 w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden">
         {/* Card header strip */}
         <div className="bg-gradient-to-r from-forest-dark to-forest px-6 py-5 flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -74,10 +74,10 @@ export function RoleSelectorPage() {
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="px-6 py-6 space-y-4">
+        <form onSubmit={handleLogin} className="bg-white/[0.85] px-6 py-6 space-y-4">
           <div>
             <p className="text-gray-800 font-semibold text-sm">Sign in to your iSERVE account</p>
-            <p className="text-gray-400 text-xs mt-0.5 leading-relaxed">{APP_TAGLINE}</p>
+            <p className="text-forest-dark text-xs mt-0.5 leading-relaxed">{APP_TAGLINE}</p>
           </div>
 
           {error && (
