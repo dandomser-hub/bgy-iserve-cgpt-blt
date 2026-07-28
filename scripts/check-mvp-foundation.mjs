@@ -14,6 +14,16 @@ const requiredFiles = [
   'database/seeders/FoundationSeeder.php',
   'tests/Feature/HealthEndpointTest.php',
   'tests/Unit/ModuleBoundaryTest.php',
+  'config/authorization.php',
+  'app/Http/Middleware/RequirePermission.php',
+  'app/Services/AuthorizationAudit.php',
+  'app/Services/RecordScope.php',
+  'app/Services/RoleAssignmentService.php',
+  'database/seeders/AuthorizationSeeder.php',
+  'tests/Feature/AuthenticationTest.php',
+  'tests/Feature/BackendAuthorizationTest.php',
+  'tests/Unit/RecordScopeTest.php',
+  'tests/Unit/RoleAssignmentServiceTest.php',
 ];
 
 const moduleDirectories = [
@@ -80,8 +90,41 @@ const seed = await readFile(`${root}/database/seeders/DatabaseSeeder.php`, 'utf8
 if (!seed.includes('FoundationSeeder::class')) {
   failures.push('DatabaseSeeder does not use the controlled foundation seed strategy.');
 }
+if (!seed.includes('AuthorizationSeeder::class')) {
+  failures.push('DatabaseSeeder does not seed the approved authorization matrix.');
+}
 if (seed.includes('test@example.com')) {
   failures.push('Default demo credentials must not be seeded.');
+}
+
+const authorization = await readFile(`${root}/config/authorization.php`, 'utf8');
+for (const requiredControl of [
+  "'system_administrator'",
+  "'punong_barangay'",
+  "'municipal_reviewer'",
+  "'administration.audit.view'",
+  "'document.approve'",
+  "'drrm.approve'",
+  "'report.export'",
+]) {
+  if (!authorization.includes(requiredControl)) {
+    failures.push(`Authorization matrix is missing: ${requiredControl}`);
+  }
+}
+
+const systemAdministrator = authorization.match(
+  /'system_administrator'\s*=>\s*\[(.*?)\n\s*\],/s,
+)?.[1] ?? '';
+for (const forbiddenApproval of [
+  "'document.approve'",
+  "'collection.certify'",
+  "'case.approve'",
+  "'drrm.approve'",
+  "'gad.approve'",
+]) {
+  if (systemAdministrator.includes(forbiddenApproval)) {
+    failures.push(`System Administrator must not inherit ${forbiddenApproval}.`);
+  }
 }
 
 if (failures.length > 0) {
