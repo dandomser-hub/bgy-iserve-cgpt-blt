@@ -16,6 +16,17 @@ const ROLE_ICONS: Record<string, React.ReactNode> = {
   read_only_auditor: <Search size={15} />,
 };
 
+const ROLE_PICKER_ORDER: RoleId[] = [
+  'drrm_focal',
+  'punong_barangay',
+  'gad_focal',
+  'municipal_reviewer',
+  'barangay_secretary',
+  'barangay_treasurer',
+  'read_only_auditor',
+  'system_admin',
+];
+
 const ROLE_BG: Record<string, string> = {
   system_admin: 'from-slate-600 to-slate-800',
   punong_barangay: 'from-forest to-forest-dark',
@@ -139,7 +150,11 @@ export function RoleSelectorPage() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {ROLES.map(role => (
+          {ROLE_PICKER_ORDER.map(roleId => {
+            const role = ROLES.find(item => item.id === roleId);
+            if (!role) return null;
+
+            return (
             <button
               key={role.id}
               onClick={() => handleQuickSelect(role.id as RoleId)}
@@ -153,7 +168,8 @@ export function RoleSelectorPage() {
                 <p className="text-green-300/70 text-[10px] group-hover:text-green-200 transition-colors">Select →</p>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
 
         <p className="text-green-300/50 text-[11px] text-center mt-5 max-w-xl mx-auto leading-relaxed">
