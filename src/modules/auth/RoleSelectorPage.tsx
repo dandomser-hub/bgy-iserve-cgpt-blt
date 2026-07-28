@@ -51,10 +51,17 @@ export function RoleSelectorPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 flex flex-col items-center justify-start py-10 px-4">
+    <div className="relative min-h-screen overflow-hidden flex flex-col items-center justify-start py-10 px-4">
+      <img
+        src="/resources/barangay-iserve-resilient-community-hero-v1.webp"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover opacity-50"
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 opacity-90" />
 
       {/* ── Login Card ── */}
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
         {/* Card header strip */}
         <div className="bg-gradient-to-r from-forest-dark to-forest px-6 py-5 flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -122,7 +129,7 @@ export function RoleSelectorPage() {
       </div>
 
       {/* ── Quick Demo Role Picker ── */}
-      <div className="w-full max-w-3xl mt-8">
+      <div className="relative z-10 w-full max-w-3xl mt-8">
         <div className="flex items-center gap-3 mb-4">
           <div className="flex-1 h-px bg-white/20" />
           <p className="text-white/60 text-[11px] font-semibold uppercase tracking-widest whitespace-nowrap">
