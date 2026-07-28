@@ -61,6 +61,10 @@ class BackendAuthorizationTest extends TestCase
         $this->assertTrue($administrator->hasPermission('administration.users.manage'));
         $this->assertTrue($administrator->hasPermission('drrm.view'));
         $this->assertFalse($administrator->hasPermission('document.approve'));
+        $this->assertFalse($administrator->hasPermission('document.export'));
+        $this->assertFalse($administrator->hasPermission('document.release'));
+        $this->assertFalse($administrator->hasPermission('document.reprint'));
+        $this->assertFalse($administrator->hasPermission('document.void'));
         $this->assertFalse($administrator->hasPermission('collection.certify'));
         $this->assertFalse($administrator->hasPermission('case.approve'));
         $this->assertFalse($administrator->hasPermission('drrm.approve'));
@@ -74,6 +78,7 @@ class BackendAuthorizationTest extends TestCase
         $punongBarangay->roles()->attach($this->role('punong_barangay'));
 
         $this->assertTrue($punongBarangay->hasPermission('document.approve'));
+        $this->assertTrue($punongBarangay->hasPermission('document.void'));
         $this->assertTrue($punongBarangay->hasPermission('collection.certify'));
         $this->assertTrue($punongBarangay->hasPermission('case.approve'));
         $this->assertTrue($punongBarangay->hasPermission('drrm.approve'));
