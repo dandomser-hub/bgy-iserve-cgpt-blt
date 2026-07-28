@@ -19,11 +19,19 @@ const requiredFiles = [
   'app/Services/AuthorizationAudit.php',
   'app/Services/RecordScope.php',
   'app/Services/RoleAssignmentService.php',
+  'app/Services/ScopedAuthorization.php',
   'database/seeders/AuthorizationSeeder.php',
   'tests/Feature/AuthenticationTest.php',
   'tests/Feature/BackendAuthorizationTest.php',
   'tests/Unit/RecordScopeTest.php',
   'tests/Unit/RoleAssignmentServiceTest.php',
+  'config/resident_household.php',
+  'app/Modules/ResidentHousehold/Models/Resident.php',
+  'app/Modules/ResidentHousehold/Models/Household.php',
+  'app/Modules/ResidentHousehold/Services/PurposeLimitedResidentLookup.php',
+  'app/Modules/ResidentHousehold/Services/DuplicateCandidateDetector.php',
+  'app/Modules/ResidentHousehold/routes/api.php',
+  'tests/Feature/ResidentHouseholdMasterDataTest.php',
 ];
 
 const moduleDirectories = [
@@ -106,10 +114,57 @@ for (const requiredControl of [
   "'document.approve'",
   "'drrm.approve'",
   "'report.export'",
+  "'resident.lookup'",
+  "'resident.reference.view'",
+  "'resident.reference.manage'",
+  "'resident.status.manage'",
+  "'resident.duplicate.review'",
+  "'resident.privacy.record'",
 ]) {
   if (!authorization.includes(requiredControl)) {
     failures.push(`Authorization matrix is missing: ${requiredControl}`);
   }
+}
+
+const residentRoutes = await readFile(
+  `${root}/app/Modules/ResidentHousehold/routes/api.php`,
+  'utf8',
+);
+for (const requiredRouteControl of [
+  "middleware('permission:resident.lookup')",
+  "middleware('permission:resident.reference.view')",
+  "middleware('permission:resident.reference.manage')",
+  "middleware('permission:resident.create')",
+  "middleware('permission:resident.update')",
+  "middleware('permission:resident.status.manage')",
+  "middleware('permission:resident.duplicate.review')",
+  "middleware('permission:resident.privacy.record')",
+]) {
+  if (!residentRoutes.includes(requiredRouteControl)) {
+    failures.push(`Resident/household routes are missing control: ${requiredRouteControl}`);
+  }
+}
+
+const residentMigration = await readFile(
+  `${root}/app/Modules/ResidentHousehold/database/migrations/2026_07_28_000002_create_resident_household_tables.php`,
+  'utf8',
+);
+for (const requiredTable of [
+  "'residents'",
+  "'households'",
+  "'household_memberships'",
+  "'resident_status_histories'",
+  "'resident_duplicate_candidates'",
+  "'privacy_notice_acknowledgements'",
+  "'resident_lookup_events'",
+]) {
+  if (!residentMigration.includes(`Schema::create(${requiredTable}`)) {
+    failures.push(`Resident/household migration is missing table: ${requiredTable}`);
+  }
+}
+
+if (env.includes('SESSION_ENCRYPT=false')) {
+  failures.push('Session encryption must not be disabled by the environment baseline.');
 }
 
 const systemAdministrator = authorization.match(

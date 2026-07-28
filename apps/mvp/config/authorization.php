@@ -7,8 +7,14 @@ $permissions = [
     'administration.audit.view' => 'Review security and operational audit events.',
     'administration.backup.manage' => 'Operate approved backup and restore controls.',
     'resident.view' => 'View resident and household records within assigned scope.',
+    'resident.lookup' => 'Search resident records for a declared and approved operational purpose.',
+    'resident.reference.view' => 'View approved purok, sitio, and address reference data.',
+    'resident.reference.manage' => 'Maintain scoped purok, sitio, and address reference data.',
     'resident.create' => 'Create resident and household records within assigned scope.',
     'resident.update' => 'Update resident and household records within assigned scope.',
+    'resident.status.manage' => 'Record controlled resident lifecycle-status changes.',
+    'resident.duplicate.review' => 'Review and resolve possible duplicate resident records.',
+    'resident.privacy.record' => 'Record versioned resident privacy-notice acknowledgements.',
     'resident.export' => 'Export approved resident and household data within assigned scope.',
     'document.view' => 'View document-service records within assigned scope.',
     'document.create' => 'Create and prepare document-service records.',
@@ -43,6 +49,8 @@ $permissions = [
 
 $moduleViewPermissions = [
     'resident.view',
+    'resident.lookup',
+    'resident.reference.view',
     'document.view',
     'collection.view',
     'case.view',
@@ -58,6 +66,7 @@ $roles = [
             'administration.users.manage',
             'administration.roles.manage',
             'administration.configuration.manage',
+            'resident.reference.manage',
             'administration.audit.view',
             'administration.backup.manage',
             ...$moduleViewPermissions,
@@ -85,8 +94,13 @@ $roles = [
         'name' => 'Barangay Secretary',
         'permissions' => [
             'resident.view',
+            'resident.lookup',
+            'resident.reference.view',
             'resident.create',
             'resident.update',
+            'resident.status.manage',
+            'resident.duplicate.review',
+            'resident.privacy.record',
             'resident.export',
             'document.view',
             'document.create',
@@ -113,12 +127,14 @@ $roles = [
     ],
     'sangguniang_barangay' => [
         'name' => 'Sangguniang Barangay / Kagawad',
-        'permissions' => ['resident.view', 'report.view'],
+        'permissions' => ['resident.view', 'resident.lookup', 'resident.reference.view', 'report.view'],
     ],
     'drrm_focal' => [
         'name' => 'BDRRMC / DRRM Focal',
         'permissions' => [
             'resident.view',
+            'resident.lookup',
+            'resident.reference.view',
             'drrm.view',
             'drrm.create',
             'drrm.update',
@@ -131,6 +147,8 @@ $roles = [
         'name' => 'GAD Focal',
         'permissions' => [
             'resident.view',
+            'resident.lookup',
+            'resident.reference.view',
             'gad.view',
             'gad.create',
             'gad.update',
@@ -143,6 +161,8 @@ $roles = [
         'name' => 'Lupon / KP User',
         'permissions' => [
             'resident.view',
+            'resident.lookup',
+            'resident.reference.view',
             'case.view',
             'case.create',
             'case.update',
@@ -154,6 +174,8 @@ $roles = [
         'name' => 'Municipal/City Cluster Admin',
         'permissions' => [
             'administration.configuration.manage',
+            'resident.reference.view',
+            'resident.reference.manage',
             'report.view',
             'report.export',
             'report.review',

@@ -27,6 +27,9 @@ class AuthorizationAudit
         string $outcome,
         Request $request,
         ?string $ability = null,
+        ?string $resourceType = null,
+        string|int|null $resourceId = null,
+        array $metadata = [],
     ): void {
         try {
             AuditEvent::query()->create([
@@ -37,9 +40,12 @@ class AuthorizationAudit
                 'route_name' => $request->route()?->getName(),
                 'request_method' => $request->method(),
                 'request_path' => $request->path(),
+                'resource_type' => $resourceType,
+                'resource_id' => $resourceId === null ? null : (string) $resourceId,
                 'metadata' => [
                     'ip_address' => $request->ip(),
                     'user_agent' => mb_substr((string) $request->userAgent(), 0, 512),
+                    ...$metadata,
                 ],
             ]);
         } catch (Throwable $exception) {

@@ -60,6 +60,23 @@ class User extends Authenticatable
             ->all();
     }
 
+    /**
+     * @return list<string>
+     */
+    public function roleCodes(): array
+    {
+        return $this->roles()
+            ->pluck('code')
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    public function hasRole(string $role): bool
+    {
+        return $this->roles()->where('code', $role)->exists();
+    }
+
     protected function email(): Attribute
     {
         return Attribute::make(
