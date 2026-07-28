@@ -1,9 +1,10 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { lazy, type ComponentType, type ReactNode } from 'react';
 import { AppShell } from '@/layouts/AppShell';
 import { useRole } from '@/app/providers/RoleProvider';
 import { ROLE_HOME } from '@/utils/constants';
 import { RouteGuard } from '@/components/shared/RouteGuard';
+import { PrototypeDisclosure } from '@/components/shared/PrototypeDisclosure';
 import type { RouteAccessId } from '@/utils/routeAccess';
 
 function RoleLandingRedirect() {
@@ -16,79 +17,79 @@ function guard(routeId: RouteAccessId, element: ReactNode) {
   return <RouteGuard routeId={routeId}>{element}</RouteGuard>;
 }
 
-// Auth
-import { RoleSelectorPage } from '@/modules/auth/RoleSelectorPage';
-import { AccessDeniedPage } from '@/modules/auth/AccessDeniedPage';
+function publicPrototypePage(element: ReactNode) {
+  return (
+    <>
+      <PrototypeDisclosure />
+      {element}
+    </>
+  );
+}
 
-// Dashboard
-import { ExecutiveDashboardPage } from '@/modules/dashboard/ExecutiveDashboardPage';
+function lazyNamed(
+  loader: () => Promise<unknown>,
+  exportName: string,
+) {
+  return lazy(async () => {
+    const loadedModule = await loader() as Record<string, unknown>;
+    return { default: loadedModule[exportName] as ComponentType };
+  });
+}
 
-// Residents
-import { ResidentRegistryPage } from '@/modules/residents/ResidentRegistryPage';
-import { ResidentProfilePage } from '@/modules/residents/ResidentProfilePage';
-import { HouseholdRegistryPage } from '@/modules/residents/HouseholdRegistryPage';
-import { ResidentDuplicateReviewPage } from '@/modules/residents/ResidentDuplicateReviewPage';
-import { ResidentStatusManagementPage } from '@/modules/residents/ResidentStatusManagementPage';
-
-// Documents
-import { DocumentRequestIntakePage } from '@/modules/documents/DocumentRequestIntakePage';
-import { DocumentQueuePage } from '@/modules/documents/DocumentQueuePage';
-import { DocumentWorkspacePage } from '@/modules/documents/DocumentWorkspacePage';
-import { DocumentPreviewReleasePage } from '@/modules/documents/DocumentPreviewReleasePage';
-import { DocumentTemplateManagerPage } from '@/modules/documents/DocumentTemplateManagerPage';
-import { DocumentVerificationPage } from '@/modules/documents/DocumentVerificationPage';
-
-// Collections
-import { CollectionReferenceLogPage } from '@/modules/collections/CollectionReferenceLogPage';
-import { DailyCollectionCertificationPage } from '@/modules/collections/DailyCollectionCertificationPage';
-import { FeeTableExemptionPage } from '@/modules/collections/FeeTableExemptionPage';
-
-// Blotter & KP
-import { BlotterRegistryPage } from '@/modules/blotter-kp/BlotterRegistryPage';
-import { BlotterIntakePage } from '@/modules/blotter-kp/BlotterIntakePage';
-import { KPCaseTrackerPage } from '@/modules/blotter-kp/KPCaseTrackerPage';
-import { KPNoticesSchedulePage } from '@/modules/blotter-kp/KPNoticesSchedulePage';
-import { KPMinutesSettlementPage } from '@/modules/blotter-kp/KPMinutesSettlementPage';
-
-// DRRM
-import { DRRMDashboardPage } from '@/modules/drrm/DRRMDashboardPage';
-import { EarlyWarningPreparednessPage } from '@/modules/drrm/EarlyWarningPreparednessPage';
-import { SitRepBuilderPage } from '@/modules/drrm/SitRepBuilderPage';
-import { DANAFormPage } from '@/modules/drrm/DANAFormPage';
-import { EvacuationDromicPage } from '@/modules/drrm/EvacuationDromicPage';
-import { HazardRiskRegisterPage } from '@/modules/drrm/HazardRiskRegisterPage';
-import { DRRMResourcesPage } from '@/modules/drrm/DRRMResourcesPage';
-import { ReliefDistributionPage } from '@/modules/drrm/ReliefDistributionPage';
-import { BDRRMCActionTrackerPage } from '@/modules/drrm/BDRRMCActionTrackerPage';
-
-// GAD
-import { GADDashboardPage } from '@/modules/gad/GADDashboardPage';
-import { AnnexD1WorkspacePage } from '@/modules/gad/AnnexD1WorkspacePage';
-import { AnnexE1WorkspacePage } from '@/modules/gad/AnnexE1WorkspacePage';
-import { GADActivityMonitorPage } from '@/modules/gad/GADActivityMonitorPage';
-import { ParticipantLogPage } from '@/modules/gad/ParticipantLogPage';
-import { GADBudgetAttributionPage } from '@/modules/gad/GADBudgetAttributionPage';
-
-// Reports & Review
-import { ReportsExportCenterPage } from '@/modules/reports/ReportsExportCenterPage';
-import { MunicipalReviewDashboardPage } from '@/modules/reports/MunicipalReviewDashboardPage';
-import { ReviewerCommentLoopPage } from '@/modules/reports/ReviewerCommentLoopPage';
-import { ComplianceChecklistPage } from '@/modules/reports/ComplianceChecklistPage';
-import { DataQualityDashboardPage } from '@/modules/reports/DataQualityDashboardPage';
-
-// Admin
-import { UserRoleAdminPage } from '@/modules/admin/UserRoleAdminPage';
-import { AuditTrailViewerPage } from '@/modules/admin/AuditTrailViewerPage';
-import { BackupSyncMonitorPage } from '@/modules/admin/BackupSyncMonitorPage';
-import { SettingsPage } from '@/modules/admin/SettingsPage';
-
-// Roadmap
-import { FutureModulesPage } from '@/modules/roadmap/FutureModulesPage';
+// Each screen is loaded only when its route is visited. AppShell and access
+// controls remain in the entry bundle so authorization runs before page render.
+const RoleSelectorPage = lazyNamed(() => import('@/modules/auth/RoleSelectorPage'), 'RoleSelectorPage');
+const AccessDeniedPage = lazyNamed(() => import('@/modules/auth/AccessDeniedPage'), 'AccessDeniedPage');
+const ExecutiveDashboardPage = lazyNamed(() => import('@/modules/dashboard/ExecutiveDashboardPage'), 'ExecutiveDashboardPage');
+const ResidentRegistryPage = lazyNamed(() => import('@/modules/residents/ResidentRegistryPage'), 'ResidentRegistryPage');
+const ResidentProfilePage = lazyNamed(() => import('@/modules/residents/ResidentProfilePage'), 'ResidentProfilePage');
+const HouseholdRegistryPage = lazyNamed(() => import('@/modules/residents/HouseholdRegistryPage'), 'HouseholdRegistryPage');
+const ResidentDuplicateReviewPage = lazyNamed(() => import('@/modules/residents/ResidentDuplicateReviewPage'), 'ResidentDuplicateReviewPage');
+const ResidentStatusManagementPage = lazyNamed(() => import('@/modules/residents/ResidentStatusManagementPage'), 'ResidentStatusManagementPage');
+const DocumentRequestIntakePage = lazyNamed(() => import('@/modules/documents/DocumentRequestIntakePage'), 'DocumentRequestIntakePage');
+const DocumentQueuePage = lazyNamed(() => import('@/modules/documents/DocumentQueuePage'), 'DocumentQueuePage');
+const DocumentWorkspacePage = lazyNamed(() => import('@/modules/documents/DocumentWorkspacePage'), 'DocumentWorkspacePage');
+const DocumentPreviewReleasePage = lazyNamed(() => import('@/modules/documents/DocumentPreviewReleasePage'), 'DocumentPreviewReleasePage');
+const DocumentTemplateManagerPage = lazyNamed(() => import('@/modules/documents/DocumentTemplateManagerPage'), 'DocumentTemplateManagerPage');
+const DocumentVerificationPage = lazyNamed(() => import('@/modules/documents/DocumentVerificationPage'), 'DocumentVerificationPage');
+const CollectionReferenceLogPage = lazyNamed(() => import('@/modules/collections/CollectionReferenceLogPage'), 'CollectionReferenceLogPage');
+const DailyCollectionCertificationPage = lazyNamed(() => import('@/modules/collections/DailyCollectionCertificationPage'), 'DailyCollectionCertificationPage');
+const FeeTableExemptionPage = lazyNamed(() => import('@/modules/collections/FeeTableExemptionPage'), 'FeeTableExemptionPage');
+const BlotterRegistryPage = lazyNamed(() => import('@/modules/blotter-kp/BlotterRegistryPage'), 'BlotterRegistryPage');
+const BlotterIntakePage = lazyNamed(() => import('@/modules/blotter-kp/BlotterIntakePage'), 'BlotterIntakePage');
+const KPCaseTrackerPage = lazyNamed(() => import('@/modules/blotter-kp/KPCaseTrackerPage'), 'KPCaseTrackerPage');
+const KPNoticesSchedulePage = lazyNamed(() => import('@/modules/blotter-kp/KPNoticesSchedulePage'), 'KPNoticesSchedulePage');
+const KPMinutesSettlementPage = lazyNamed(() => import('@/modules/blotter-kp/KPMinutesSettlementPage'), 'KPMinutesSettlementPage');
+const DRRMDashboardPage = lazyNamed(() => import('@/modules/drrm/DRRMDashboardPage'), 'DRRMDashboardPage');
+const EarlyWarningPreparednessPage = lazyNamed(() => import('@/modules/drrm/EarlyWarningPreparednessPage'), 'EarlyWarningPreparednessPage');
+const SitRepBuilderPage = lazyNamed(() => import('@/modules/drrm/SitRepBuilderPage'), 'SitRepBuilderPage');
+const DANAFormPage = lazyNamed(() => import('@/modules/drrm/DANAFormPage'), 'DANAFormPage');
+const EvacuationDromicPage = lazyNamed(() => import('@/modules/drrm/EvacuationDromicPage'), 'EvacuationDromicPage');
+const HazardRiskRegisterPage = lazyNamed(() => import('@/modules/drrm/HazardRiskRegisterPage'), 'HazardRiskRegisterPage');
+const DRRMResourcesPage = lazyNamed(() => import('@/modules/drrm/DRRMResourcesPage'), 'DRRMResourcesPage');
+const ReliefDistributionPage = lazyNamed(() => import('@/modules/drrm/ReliefDistributionPage'), 'ReliefDistributionPage');
+const BDRRMCActionTrackerPage = lazyNamed(() => import('@/modules/drrm/BDRRMCActionTrackerPage'), 'BDRRMCActionTrackerPage');
+const GADDashboardPage = lazyNamed(() => import('@/modules/gad/GADDashboardPage'), 'GADDashboardPage');
+const AnnexD1WorkspacePage = lazyNamed(() => import('@/modules/gad/AnnexD1WorkspacePage'), 'AnnexD1WorkspacePage');
+const AnnexE1WorkspacePage = lazyNamed(() => import('@/modules/gad/AnnexE1WorkspacePage'), 'AnnexE1WorkspacePage');
+const GADActivityMonitorPage = lazyNamed(() => import('@/modules/gad/GADActivityMonitorPage'), 'GADActivityMonitorPage');
+const ParticipantLogPage = lazyNamed(() => import('@/modules/gad/ParticipantLogPage'), 'ParticipantLogPage');
+const GADBudgetAttributionPage = lazyNamed(() => import('@/modules/gad/GADBudgetAttributionPage'), 'GADBudgetAttributionPage');
+const ReportsExportCenterPage = lazyNamed(() => import('@/modules/reports/ReportsExportCenterPage'), 'ReportsExportCenterPage');
+const MunicipalReviewDashboardPage = lazyNamed(() => import('@/modules/reports/MunicipalReviewDashboardPage'), 'MunicipalReviewDashboardPage');
+const ReviewerCommentLoopPage = lazyNamed(() => import('@/modules/reports/ReviewerCommentLoopPage'), 'ReviewerCommentLoopPage');
+const ComplianceChecklistPage = lazyNamed(() => import('@/modules/reports/ComplianceChecklistPage'), 'ComplianceChecklistPage');
+const DataQualityDashboardPage = lazyNamed(() => import('@/modules/reports/DataQualityDashboardPage'), 'DataQualityDashboardPage');
+const UserRoleAdminPage = lazyNamed(() => import('@/modules/admin/UserRoleAdminPage'), 'UserRoleAdminPage');
+const AuditTrailViewerPage = lazyNamed(() => import('@/modules/admin/AuditTrailViewerPage'), 'AuditTrailViewerPage');
+const BackupSyncMonitorPage = lazyNamed(() => import('@/modules/admin/BackupSyncMonitorPage'), 'BackupSyncMonitorPage');
+const SettingsPage = lazyNamed(() => import('@/modules/admin/SettingsPage'), 'SettingsPage');
+const FutureModulesPage = lazyNamed(() => import('@/modules/roadmap/FutureModulesPage'), 'FutureModulesPage');
 
 export const router = createBrowserRouter([
   // Public routes (no AppShell)
-  { path: '/login-demo', element: <RoleSelectorPage /> },
-  { path: '/public/verify', element: <DocumentVerificationPage /> },
+  { path: '/login-demo', element: publicPrototypePage(<RoleSelectorPage />) },
+  { path: '/public/verify', element: publicPrototypePage(<DocumentVerificationPage />) },
 
   // Protected routes (with AppShell)
   {
