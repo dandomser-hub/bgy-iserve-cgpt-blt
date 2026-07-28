@@ -69,7 +69,7 @@ export function RoleSelectorPage() {
           </div>
           <div>
             <h1 className="text-white font-bold text-base leading-tight">{APP_NAME}</h1>
-            <p className="text-green-200 text-xs leading-tight">Barangay Resiliency and Empowerment</p>
+            <p className="text-green-200 text-xs leading-tight">Resilient and Empowered Barangay</p>
           </div>
         </div>
 
