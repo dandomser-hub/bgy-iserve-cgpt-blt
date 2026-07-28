@@ -56,12 +56,12 @@ export function RoleSelectorPage() {
         src="/resources/barangay-iserve-resilient-community-hero-v1.webp"
         alt=""
         aria-hidden="true"
-        className="absolute inset-0 h-full w-full object-cover opacity-50"
+        className="absolute inset-0 h-full w-full object-cover opacity-100"
       />
-      <div className="absolute inset-0 bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 opacity-90" />
+      <div className="absolute inset-0 bg-gradient-to-br from-teal-900 via-teal-600 to-emerald-400 opacity-[0.85]" />
 
       {/* ── Login Card ── */}
-      <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <div className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-2xl overflow-hidden opacity-90">
         {/* Card header strip */}
         <div className="bg-gradient-to-r from-forest-dark to-forest px-6 py-5 flex items-center gap-3">
           <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
