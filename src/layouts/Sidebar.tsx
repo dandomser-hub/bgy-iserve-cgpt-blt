@@ -7,16 +7,14 @@ import {
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRole } from '@/app/providers/RoleProvider';
-import { hasPermission } from '@/utils/permissions';
+import { canAccessPath } from '@/utils/routeAccess';
 import { BARANGAY_INFO } from '@/data/mockReferenceData';
-import type { RoleId, Permission } from '@/types/auth';
+import type { RoleId } from '@/types/auth';
 
 interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  permission?: Permission;
-  permissions?: Permission[];
   children?: NavItem[];
 }
 
@@ -25,81 +23,81 @@ function getNavGroups(_roleId: RoleId): { group: string; items: NavItem[] }[] {
     {
       group: 'Overview',
       items: [
-        { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={16} />, permissions: ['dashboard.executive', 'reports.view'] },
+        { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={16} /> },
       ],
     },
     {
       group: 'Registry',
       items: [
-        { label: 'Residents', path: '/residents', icon: <Users size={16} />, permission: 'residents.view' },
-        { label: 'Households', path: '/households', icon: <Home size={16} />, permission: 'households.view' },
+        { label: 'Residents', path: '/residents', icon: <Users size={16} /> },
+        { label: 'Households', path: '/households', icon: <Home size={16} /> },
       ],
     },
     {
       group: 'Documents',
       items: [
-        { label: 'Request Intake', path: '/documents/intake', icon: <FileText size={16} />, permission: 'documents.create' },
-        { label: 'Document Queue', path: '/documents/queue', icon: <Layers size={16} />, permission: 'documents.view' },
-        { label: 'Templates', path: '/documents/templates', icon: <BookOpen size={16} />, permission: 'documents.templates' },
-        { label: 'Verification', path: '/documents/verification', icon: <Shield size={16} />, permission: 'documents.view' },
+        { label: 'Request Intake', path: '/documents/intake', icon: <FileText size={16} /> },
+        { label: 'Document Queue', path: '/documents/queue', icon: <Layers size={16} /> },
+        { label: 'Templates', path: '/documents/templates', icon: <BookOpen size={16} /> },
+        { label: 'Verification', path: '/documents/verification', icon: <Shield size={16} /> },
       ],
     },
     {
       group: 'Collections',
       items: [
-        { label: 'Reference Log', path: '/collections/reference-log', icon: <Wallet size={16} />, permission: 'collections.view' },
-        { label: 'Daily Certification', path: '/collections/daily-certification', icon: <ClipboardList size={16} />, permission: 'collections.certify' },
-        { label: 'Fees & Exemptions', path: '/collections/fees-exemptions', icon: <Archive size={16} />, permission: 'collections.fees' },
+        { label: 'Reference Log', path: '/collections/reference-log', icon: <Wallet size={16} /> },
+        { label: 'Daily Certification', path: '/collections/daily-certification', icon: <ClipboardList size={16} /> },
+        { label: 'Fees & Exemptions', path: '/collections/fees-exemptions', icon: <Archive size={16} /> },
       ],
     },
     {
       group: 'Blotter & KP',
       items: [
-        { label: 'Blotter Registry', path: '/blotter', icon: <Scale size={16} />, permission: 'blotter.view' },
-        { label: 'KP Case Tracker', path: '/kp-cases', icon: <Activity size={16} />, permission: 'kp.view' },
+        { label: 'Blotter Registry', path: '/blotter', icon: <Scale size={16} /> },
+        { label: 'KP Case Tracker', path: '/kp-cases', icon: <Activity size={16} /> },
       ],
     },
     {
       group: 'DRRM',
       items: [
-        { label: 'DRRM Dashboard', path: '/drrm', icon: <AlertTriangle size={16} />, permission: 'drrm.view' },
-        { label: 'Early Warning', path: '/drrm/early-warning', icon: <AlertTriangle size={16} />, permission: 'drrm.view' },
-        { label: 'SitRep Builder', path: '/drrm/sitrep', icon: <FileText size={16} />, permission: 'drrm.view' },
-        { label: 'DANA Form', path: '/drrm/dana', icon: <Map size={16} />, permission: 'drrm.view' },
-        { label: 'Evacuation / DROMIC', path: '/drrm/evacuation-dromic', icon: <Home size={16} />, permission: 'drrm.view' },
-        { label: 'Hazard & Risk', path: '/drrm/hazard-risk', icon: <Map size={16} />, permission: 'drrm.view' },
-        { label: 'DRRM Resources', path: '/drrm/resources', icon: <Archive size={16} />, permission: 'drrm.view' },
-        { label: 'Relief Distribution', path: '/drrm/relief-distribution', icon: <Heart size={16} />, permission: 'drrm.view' },
-        { label: 'BDRRMC Actions', path: '/drrm/actions', icon: <ClipboardList size={16} />, permission: 'drrm.view' },
+        { label: 'DRRM Dashboard', path: '/drrm', icon: <AlertTriangle size={16} /> },
+        { label: 'Early Warning', path: '/drrm/early-warning', icon: <AlertTriangle size={16} /> },
+        { label: 'SitRep Builder', path: '/drrm/sitrep', icon: <FileText size={16} /> },
+        { label: 'DANA Form', path: '/drrm/dana', icon: <Map size={16} /> },
+        { label: 'Evacuation / DROMIC', path: '/drrm/evacuation-dromic', icon: <Home size={16} /> },
+        { label: 'Hazard & Risk', path: '/drrm/hazard-risk', icon: <Map size={16} /> },
+        { label: 'DRRM Resources', path: '/drrm/resources', icon: <Archive size={16} /> },
+        { label: 'Relief Distribution', path: '/drrm/relief-distribution', icon: <Heart size={16} /> },
+        { label: 'BDRRMC Actions', path: '/drrm/actions', icon: <ClipboardList size={16} /> },
       ],
     },
     {
       group: 'GAD',
       items: [
-        { label: 'GAD Dashboard', path: '/gad', icon: <Heart size={16} />, permission: 'gad.view' },
-        { label: 'Annex D-1', path: '/gad/annex-d1', icon: <FileText size={16} />, permission: 'gad.view' },
-        { label: 'Annex E-1', path: '/gad/annex-e1', icon: <FileText size={16} />, permission: 'gad.view' },
-        { label: 'Activity Monitor', path: '/gad/activity-monitor', icon: <Activity size={16} />, permission: 'gad.view' },
-        { label: 'Participant Log', path: '/gad/participants', icon: <Users size={16} />, permission: 'gad.view' },
-        { label: 'Budget Attribution', path: '/gad/budget-attribution', icon: <Wallet size={16} />, permission: 'gad.view' },
+        { label: 'GAD Dashboard', path: '/gad', icon: <Heart size={16} /> },
+        { label: 'Annex D-1', path: '/gad/annex-d1', icon: <FileText size={16} /> },
+        { label: 'Annex E-1', path: '/gad/annex-e1', icon: <FileText size={16} /> },
+        { label: 'Activity Monitor', path: '/gad/activity-monitor', icon: <Activity size={16} /> },
+        { label: 'Participant Log', path: '/gad/participants', icon: <Users size={16} /> },
+        { label: 'Budget Attribution', path: '/gad/budget-attribution', icon: <Wallet size={16} /> },
       ],
     },
     {
       group: 'Reports & Review',
       items: [
-        { label: 'Reports & Exports', path: '/reports', icon: <BarChart2 size={16} />, permission: 'reports.view' },
-        { label: 'Municipal Review', path: '/review/municipal-city', icon: <Star size={16} />, permission: 'review.view' },
-        { label: 'Compliance (SGLGB)', path: '/compliance/sglgb', icon: <Shield size={16} />, permission: 'reports.view' },
-        { label: 'Data Quality', path: '/data-quality', icon: <Activity size={16} />, permission: 'reports.view' },
+        { label: 'Reports & Exports', path: '/reports', icon: <BarChart2 size={16} /> },
+        { label: 'Municipal Review', path: '/review/municipal-city', icon: <Star size={16} /> },
+        { label: 'Compliance (SGLGB)', path: '/compliance/sglgb', icon: <Shield size={16} /> },
+        { label: 'Data Quality', path: '/data-quality', icon: <Activity size={16} /> },
       ],
     },
     {
       group: 'Administration',
       items: [
-        { label: 'Users & Roles', path: '/admin/users-roles', icon: <UserCog size={16} />, permission: 'admin.users' },
-        { label: 'Audit Trail', path: '/admin/audit', icon: <ClipboardList size={16} />, permission: 'admin.audit' },
-        { label: 'Backup & Sync', path: '/admin/backup-sync', icon: <Archive size={16} />, permission: 'admin.backup' },
-        { label: 'Settings', path: '/admin/settings', icon: <Settings size={16} />, permission: 'admin.settings' },
+        { label: 'Users & Roles', path: '/admin/users-roles', icon: <UserCog size={16} /> },
+        { label: 'Audit Trail', path: '/admin/audit', icon: <ClipboardList size={16} /> },
+        { label: 'Backup & Sync', path: '/admin/backup-sync', icon: <Archive size={16} /> },
+        { label: 'Settings', path: '/admin/settings', icon: <Settings size={16} /> },
       ],
     },
     {
@@ -112,10 +110,7 @@ function getNavGroups(_roleId: RoleId): { group: string; items: NavItem[] }[] {
 }
 
 function isAllowed(roleId: RoleId, item: NavItem): boolean {
-  if (!item.permission && !item.permissions) return true;
-  if (item.permission) return hasPermission(roleId, item.permission);
-  if (item.permissions) return item.permissions.some(p => hasPermission(roleId, p));
-  return false;
+  return canAccessPath(roleId, item.path);
 }
 
 interface SidebarProps {

@@ -1,18 +1,50 @@
-import { AlertTriangle, Users, FileText, Package, BarChart3, Truck } from 'lucide-react';
+import { AlertTriangle, Users, FileText, Package, BarChart3, Truck, Radio, Link2 } from 'lucide-react';
+import { useMockData } from '@/app/providers/MockDataProvider';
 import { Card, StatCard } from '@/components/ui/Card';
 import { PageScaffold } from '@/components/shared/PageScaffold';
 import { StatusChip, Badge } from '@/components/ui/Badge';
-import { mockEarlyWarnings, mockSitReps, mockEvacuationRecords, mockDANARecords, mockDRRMResources, mockReliefDistributions, mockBDRRMCActions } from '@/data/mockDRRM';
+import {
+  mockEarlyWarnings,
+  mockDRRMResources,
+  mockReliefDistributions,
+  mockBDRRMCActions,
+  mockDisasterEvents,
+  mockOperationalPeriods,
+  mockDRRMRecordLinks,
+  getDRRMOperationalRecords,
+  DRRM_RECORD_TYPE_LABELS,
+} from '@/data/mockDRRM';
+import type { DRRMRecordType } from '@/types/drrm';
 import { formatDateTime, formatDate } from '@/utils/formatters';
 
 export function DRRMDashboardPage() {
+  const { sitReps, danaRecords, evacuationRecords } = useMockData();
   // Calculate metrics
+  const currentEvent = mockDisasterEvents.find(event => event.status !== 'Archived' && event.status !== 'Closed');
+  const currentOperationalPeriod = currentEvent
+    ? mockOperationalPeriods.find(period => period.eventId === currentEvent.id && period.status === 'Active')
+    : undefined;
   const activeAlerts = mockEarlyWarnings.filter(e => e.status === 'Active').length;
-  const affectedFamilies = mockEvacuationRecords.reduce((sum, r) => sum + r.displacedFamilies, 0);
-  const activeReports = mockSitReps.filter(s => ['Draft', 'Submitted', 'Approved'].includes(s.status)).length;
-  const pendingDANA = mockDANARecords.filter(d => d.status === 'Draft').length;
+  const affectedFamilies = currentEvent?.population.affected.families ?? 0;
+  const activeReports = sitReps.filter(s => ['Draft', 'Returned', 'For Review', 'Approved'].includes(s.status)).length;
+  const pendingDANA = danaRecords.filter(d => ['Draft', 'Returned', 'For Review'].includes(d.status)).length;
   const availableResources = mockDRRMResources.filter(r => r.availability === 'Available').length;
   const totalDistributions = mockReliefDistributions.length;
+  const currentEventRecords = currentEvent
+    ? getDRRMOperationalRecords(currentEvent.id)
+    : [];
+  const currentEventLinks = currentEvent
+    ? mockDRRMRecordLinks.filter(link => link.eventId === currentEvent.id)
+    : [];
+  const recordCounts = currentEventRecords.reduce(
+    (counts, { recordType }) => {
+      counts[recordType] += 1;
+      return counts;
+    },
+    Object.fromEntries(
+      Object.keys(DRRM_RECORD_TYPE_LABELS).map(recordType => [recordType, 0]),
+    ) as Record<DRRMRecordType, number>,
+  );
 
   return (
     <PageScaffold
@@ -22,6 +54,36 @@ export function DRRMDashboardPage() {
       moduleTag="DRRM"
       priorityTag="P0"
     >
+      {currentEvent && (
+        <Card className="mb-6 border-sky-200">
+          <div className="p-5 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="md:col-span-2">
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Current disaster event</p>
+              <p className="text-lg font-bold text-slate-800 mt-1">{currentEvent.name}</p>
+              <p className="text-sm text-slate-600">{currentEvent.eventCode} · {currentEvent.status}</p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold">Operational period</p>
+              <p className="font-semibold text-slate-800 mt-1">
+                {currentOperationalPeriod ? `Period ${currentOperationalPeriod.periodNo}` : 'No active period'}
+              </p>
+              <p className="text-xs text-slate-600">
+                Cutoff {currentOperationalPeriod ? formatDateTime(currentOperationalPeriod.reportingCutoff) : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 uppercase tracking-wide font-semibold flex items-center gap-1">
+                <Radio size={13} /> EOC context
+              </p>
+              <p className="font-semibold text-slate-800 mt-1">
+                {currentOperationalPeriod?.eocActivationLevel ?? 'Not Activated'}
+              </p>
+              <p className="text-xs text-slate-600">{currentOperationalPeriod?.eocLocation ?? 'No EOC location'}</p>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
         <StatCard
@@ -34,7 +96,7 @@ export function DRRMDashboardPage() {
         <StatCard
           title="Affected Families"
           value={affectedFamilies}
-          subtitle="Total displaced"
+          subtitle="Affected population"
           icon={<Users size={20} />}
           color="sky"
         />
@@ -67,6 +129,41 @@ export function DRRMDashboardPage() {
           color="slate"
         />
       </div>
+
+      {currentEvent && (
+        <Card className="mb-6">
+          <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                <Link2 size={18} className="text-ocean" />
+                Linked Operational Picture
+              </h3>
+              <p className="text-xs text-slate-600 mt-1">
+                Controlled records connected under {currentEvent.eventCode}
+              </p>
+            </div>
+            <Badge
+              label={`${currentEventLinks.length} verified links`}
+              className="bg-sky-100 text-sky-700"
+            />
+          </div>
+          <div className="p-5 grid grid-cols-2 md:grid-cols-4 gap-3">
+            {(Object.entries(DRRM_RECORD_TYPE_LABELS) as [DRRMRecordType, string][]).map(
+              ([recordType, label]) => (
+                <div
+                  key={recordType}
+                  className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                >
+                  <p className="text-2xl font-bold text-slate-800">
+                    {recordCounts[recordType]}
+                  </p>
+                  <p className="text-xs text-slate-600 mt-1">{label}</p>
+                </div>
+              ),
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -118,12 +215,12 @@ export function DRRMDashboardPage() {
               Evacuation Centers
             </h3>
             <span className="text-xs bg-sky-100 text-sky-700 px-2 py-1 rounded">
-              {mockEvacuationRecords.filter(e => e.status === 'Open').length}
+              {evacuationRecords.filter(e => e.status === 'Open').length}
             </span>
           </div>
           <div className="p-5 space-y-3">
-            {mockEvacuationRecords.filter(e => e.status === 'Open').length > 0 ? (
-              mockEvacuationRecords
+            {evacuationRecords.filter(e => e.status === 'Open').length > 0 ? (
+              evacuationRecords
                 .filter(e => e.status === 'Open')
                 .map(center => (
                   <div key={center.id} className="p-3 bg-sky-50 border border-sky-200 rounded-lg">

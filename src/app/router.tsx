@@ -1,7 +1,11 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { lazy, type ComponentType, type ReactNode } from 'react';
 import { AppShell } from '@/layouts/AppShell';
 import { useRole } from '@/app/providers/RoleProvider';
 import { ROLE_HOME } from '@/utils/constants';
+import { RouteGuard } from '@/components/shared/RouteGuard';
+import { PrototypeDisclosure } from '@/components/shared/PrototypeDisclosure';
+import type { RouteAccessId } from '@/utils/routeAccess';
 
 function RoleLandingRedirect() {
   const { roleId } = useRole();
@@ -9,78 +13,83 @@ function RoleLandingRedirect() {
   return <Navigate to={ROLE_HOME[roleId]} replace />;
 }
 
-// Auth
-import { RoleSelectorPage } from '@/modules/auth/RoleSelectorPage';
+function guard(routeId: RouteAccessId, element: ReactNode) {
+  return <RouteGuard routeId={routeId}>{element}</RouteGuard>;
+}
 
-// Dashboard
-import { ExecutiveDashboardPage } from '@/modules/dashboard/ExecutiveDashboardPage';
+function publicPrototypePage(element: ReactNode) {
+  return (
+    <>
+      <PrototypeDisclosure />
+      {element}
+    </>
+  );
+}
 
-// Residents
-import { ResidentRegistryPage } from '@/modules/residents/ResidentRegistryPage';
-import { ResidentProfilePage } from '@/modules/residents/ResidentProfilePage';
-import { HouseholdRegistryPage } from '@/modules/residents/HouseholdRegistryPage';
-import { ResidentDuplicateReviewPage } from '@/modules/residents/ResidentDuplicateReviewPage';
-import { ResidentStatusManagementPage } from '@/modules/residents/ResidentStatusManagementPage';
+function lazyNamed(
+  loader: () => Promise<unknown>,
+  exportName: string,
+) {
+  return lazy(async () => {
+    const loadedModule = await loader() as Record<string, unknown>;
+    return { default: loadedModule[exportName] as ComponentType };
+  });
+}
 
-// Documents
-import { DocumentRequestIntakePage } from '@/modules/documents/DocumentRequestIntakePage';
-import { DocumentQueuePage } from '@/modules/documents/DocumentQueuePage';
-import { DocumentWorkspacePage } from '@/modules/documents/DocumentWorkspacePage';
-import { DocumentPreviewReleasePage } from '@/modules/documents/DocumentPreviewReleasePage';
-import { DocumentTemplateManagerPage } from '@/modules/documents/DocumentTemplateManagerPage';
-import { DocumentVerificationPage } from '@/modules/documents/DocumentVerificationPage';
-
-// Collections
-import { CollectionReferenceLogPage } from '@/modules/collections/CollectionReferenceLogPage';
-import { DailyCollectionCertificationPage } from '@/modules/collections/DailyCollectionCertificationPage';
-import { FeeTableExemptionPage } from '@/modules/collections/FeeTableExemptionPage';
-
-// Blotter & KP
-import { BlotterRegistryPage } from '@/modules/blotter-kp/BlotterRegistryPage';
-import { BlotterIntakePage } from '@/modules/blotter-kp/BlotterIntakePage';
-import { KPCaseTrackerPage } from '@/modules/blotter-kp/KPCaseTrackerPage';
-import { KPNoticesSchedulePage } from '@/modules/blotter-kp/KPNoticesSchedulePage';
-import { KPMinutesSettlementPage } from '@/modules/blotter-kp/KPMinutesSettlementPage';
-
-// DRRM
-import { DRRMDashboardPage } from '@/modules/drrm/DRRMDashboardPage';
-import { EarlyWarningPreparednessPage } from '@/modules/drrm/EarlyWarningPreparednessPage';
-import { SitRepBuilderPage } from '@/modules/drrm/SitRepBuilderPage';
-import { DANAFormPage } from '@/modules/drrm/DANAFormPage';
-import { EvacuationDromicPage } from '@/modules/drrm/EvacuationDromicPage';
-import { HazardRiskRegisterPage } from '@/modules/drrm/HazardRiskRegisterPage';
-import { DRRMResourcesPage } from '@/modules/drrm/DRRMResourcesPage';
-import { ReliefDistributionPage } from '@/modules/drrm/ReliefDistributionPage';
-import { BDRRMCActionTrackerPage } from '@/modules/drrm/BDRRMCActionTrackerPage';
-
-// GAD
-import { GADDashboardPage } from '@/modules/gad/GADDashboardPage';
-import { AnnexD1WorkspacePage } from '@/modules/gad/AnnexD1WorkspacePage';
-import { AnnexE1WorkspacePage } from '@/modules/gad/AnnexE1WorkspacePage';
-import { GADActivityMonitorPage } from '@/modules/gad/GADActivityMonitorPage';
-import { ParticipantLogPage } from '@/modules/gad/ParticipantLogPage';
-import { GADBudgetAttributionPage } from '@/modules/gad/GADBudgetAttributionPage';
-
-// Reports & Review
-import { ReportsExportCenterPage } from '@/modules/reports/ReportsExportCenterPage';
-import { MunicipalReviewDashboardPage } from '@/modules/reports/MunicipalReviewDashboardPage';
-import { ReviewerCommentLoopPage } from '@/modules/reports/ReviewerCommentLoopPage';
-import { ComplianceChecklistPage } from '@/modules/reports/ComplianceChecklistPage';
-import { DataQualityDashboardPage } from '@/modules/reports/DataQualityDashboardPage';
-
-// Admin
-import { UserRoleAdminPage } from '@/modules/admin/UserRoleAdminPage';
-import { AuditTrailViewerPage } from '@/modules/admin/AuditTrailViewerPage';
-import { BackupSyncMonitorPage } from '@/modules/admin/BackupSyncMonitorPage';
-import { SettingsPage } from '@/modules/admin/SettingsPage';
-
-// Roadmap
-import { FutureModulesPage } from '@/modules/roadmap/FutureModulesPage';
+// Each screen is loaded only when its route is visited. AppShell and access
+// controls remain in the entry bundle so authorization runs before page render.
+const RoleSelectorPage = lazyNamed(() => import('@/modules/auth/RoleSelectorPage'), 'RoleSelectorPage');
+const AccessDeniedPage = lazyNamed(() => import('@/modules/auth/AccessDeniedPage'), 'AccessDeniedPage');
+const ExecutiveDashboardPage = lazyNamed(() => import('@/modules/dashboard/ExecutiveDashboardPage'), 'ExecutiveDashboardPage');
+const ResidentRegistryPage = lazyNamed(() => import('@/modules/residents/ResidentRegistryPage'), 'ResidentRegistryPage');
+const ResidentProfilePage = lazyNamed(() => import('@/modules/residents/ResidentProfilePage'), 'ResidentProfilePage');
+const HouseholdRegistryPage = lazyNamed(() => import('@/modules/residents/HouseholdRegistryPage'), 'HouseholdRegistryPage');
+const ResidentDuplicateReviewPage = lazyNamed(() => import('@/modules/residents/ResidentDuplicateReviewPage'), 'ResidentDuplicateReviewPage');
+const ResidentStatusManagementPage = lazyNamed(() => import('@/modules/residents/ResidentStatusManagementPage'), 'ResidentStatusManagementPage');
+const DocumentRequestIntakePage = lazyNamed(() => import('@/modules/documents/DocumentRequestIntakePage'), 'DocumentRequestIntakePage');
+const DocumentQueuePage = lazyNamed(() => import('@/modules/documents/DocumentQueuePage'), 'DocumentQueuePage');
+const DocumentWorkspacePage = lazyNamed(() => import('@/modules/documents/DocumentWorkspacePage'), 'DocumentWorkspacePage');
+const DocumentPreviewReleasePage = lazyNamed(() => import('@/modules/documents/DocumentPreviewReleasePage'), 'DocumentPreviewReleasePage');
+const DocumentTemplateManagerPage = lazyNamed(() => import('@/modules/documents/DocumentTemplateManagerPage'), 'DocumentTemplateManagerPage');
+const DocumentVerificationPage = lazyNamed(() => import('@/modules/documents/DocumentVerificationPage'), 'DocumentVerificationPage');
+const CollectionReferenceLogPage = lazyNamed(() => import('@/modules/collections/CollectionReferenceLogPage'), 'CollectionReferenceLogPage');
+const DailyCollectionCertificationPage = lazyNamed(() => import('@/modules/collections/DailyCollectionCertificationPage'), 'DailyCollectionCertificationPage');
+const FeeTableExemptionPage = lazyNamed(() => import('@/modules/collections/FeeTableExemptionPage'), 'FeeTableExemptionPage');
+const BlotterRegistryPage = lazyNamed(() => import('@/modules/blotter-kp/BlotterRegistryPage'), 'BlotterRegistryPage');
+const BlotterIntakePage = lazyNamed(() => import('@/modules/blotter-kp/BlotterIntakePage'), 'BlotterIntakePage');
+const KPCaseTrackerPage = lazyNamed(() => import('@/modules/blotter-kp/KPCaseTrackerPage'), 'KPCaseTrackerPage');
+const KPNoticesSchedulePage = lazyNamed(() => import('@/modules/blotter-kp/KPNoticesSchedulePage'), 'KPNoticesSchedulePage');
+const KPMinutesSettlementPage = lazyNamed(() => import('@/modules/blotter-kp/KPMinutesSettlementPage'), 'KPMinutesSettlementPage');
+const DRRMDashboardPage = lazyNamed(() => import('@/modules/drrm/DRRMDashboardPage'), 'DRRMDashboardPage');
+const EarlyWarningPreparednessPage = lazyNamed(() => import('@/modules/drrm/EarlyWarningPreparednessPage'), 'EarlyWarningPreparednessPage');
+const SitRepBuilderPage = lazyNamed(() => import('@/modules/drrm/SitRepBuilderPage'), 'SitRepBuilderPage');
+const DANAFormPage = lazyNamed(() => import('@/modules/drrm/DANAFormPage'), 'DANAFormPage');
+const EvacuationDromicPage = lazyNamed(() => import('@/modules/drrm/EvacuationDromicPage'), 'EvacuationDromicPage');
+const HazardRiskRegisterPage = lazyNamed(() => import('@/modules/drrm/HazardRiskRegisterPage'), 'HazardRiskRegisterPage');
+const DRRMResourcesPage = lazyNamed(() => import('@/modules/drrm/DRRMResourcesPage'), 'DRRMResourcesPage');
+const ReliefDistributionPage = lazyNamed(() => import('@/modules/drrm/ReliefDistributionPage'), 'ReliefDistributionPage');
+const BDRRMCActionTrackerPage = lazyNamed(() => import('@/modules/drrm/BDRRMCActionTrackerPage'), 'BDRRMCActionTrackerPage');
+const GADDashboardPage = lazyNamed(() => import('@/modules/gad/GADDashboardPage'), 'GADDashboardPage');
+const AnnexD1WorkspacePage = lazyNamed(() => import('@/modules/gad/AnnexD1WorkspacePage'), 'AnnexD1WorkspacePage');
+const AnnexE1WorkspacePage = lazyNamed(() => import('@/modules/gad/AnnexE1WorkspacePage'), 'AnnexE1WorkspacePage');
+const GADActivityMonitorPage = lazyNamed(() => import('@/modules/gad/GADActivityMonitorPage'), 'GADActivityMonitorPage');
+const ParticipantLogPage = lazyNamed(() => import('@/modules/gad/ParticipantLogPage'), 'ParticipantLogPage');
+const GADBudgetAttributionPage = lazyNamed(() => import('@/modules/gad/GADBudgetAttributionPage'), 'GADBudgetAttributionPage');
+const ReportsExportCenterPage = lazyNamed(() => import('@/modules/reports/ReportsExportCenterPage'), 'ReportsExportCenterPage');
+const MunicipalReviewDashboardPage = lazyNamed(() => import('@/modules/reports/MunicipalReviewDashboardPage'), 'MunicipalReviewDashboardPage');
+const ReviewerCommentLoopPage = lazyNamed(() => import('@/modules/reports/ReviewerCommentLoopPage'), 'ReviewerCommentLoopPage');
+const ComplianceChecklistPage = lazyNamed(() => import('@/modules/reports/ComplianceChecklistPage'), 'ComplianceChecklistPage');
+const DataQualityDashboardPage = lazyNamed(() => import('@/modules/reports/DataQualityDashboardPage'), 'DataQualityDashboardPage');
+const UserRoleAdminPage = lazyNamed(() => import('@/modules/admin/UserRoleAdminPage'), 'UserRoleAdminPage');
+const AuditTrailViewerPage = lazyNamed(() => import('@/modules/admin/AuditTrailViewerPage'), 'AuditTrailViewerPage');
+const BackupSyncMonitorPage = lazyNamed(() => import('@/modules/admin/BackupSyncMonitorPage'), 'BackupSyncMonitorPage');
+const SettingsPage = lazyNamed(() => import('@/modules/admin/SettingsPage'), 'SettingsPage');
+const FutureModulesPage = lazyNamed(() => import('@/modules/roadmap/FutureModulesPage'), 'FutureModulesPage');
 
 export const router = createBrowserRouter([
   // Public routes (no AppShell)
-  { path: '/login-demo', element: <RoleSelectorPage /> },
-  { path: '/public/verify', element: <DocumentVerificationPage /> },
+  { path: '/login-demo', element: publicPrototypePage(<RoleSelectorPage />) },
+  { path: '/public/verify', element: publicPrototypePage(<DocumentVerificationPage />) },
 
   // Protected routes (with AppShell)
   {
@@ -88,74 +97,75 @@ export const router = createBrowserRouter([
     element: <AppShell />,
     children: [
       { index: true, element: <RoleLandingRedirect /> },
-      { path: 'dashboard', element: <ExecutiveDashboardPage /> },
+      { path: 'access-denied', element: <AccessDeniedPage /> },
+      { path: 'dashboard', element: guard('dashboard', <ExecutiveDashboardPage />) },
 
       // Residents
-      { path: 'residents', element: <ResidentRegistryPage /> },
-      { path: 'residents/duplicates', element: <ResidentDuplicateReviewPage /> },
-      { path: 'residents/status-management', element: <ResidentStatusManagementPage /> },
-      { path: 'residents/:id', element: <ResidentProfilePage /> },
-      { path: 'households', element: <HouseholdRegistryPage /> },
+      { path: 'residents', element: guard('residents', <ResidentRegistryPage />) },
+      { path: 'residents/duplicates', element: guard('residentDuplicates', <ResidentDuplicateReviewPage />) },
+      { path: 'residents/status-management', element: guard('residentStatusManagement', <ResidentStatusManagementPage />) },
+      { path: 'residents/:id', element: guard('residentProfile', <ResidentProfilePage />) },
+      { path: 'households', element: guard('households', <HouseholdRegistryPage />) },
 
       // Documents
-      { path: 'documents/intake', element: <DocumentRequestIntakePage /> },
-      { path: 'documents/queue', element: <DocumentQueuePage /> },
-      { path: 'documents/templates', element: <DocumentTemplateManagerPage /> },
-      { path: 'documents/verification', element: <DocumentVerificationPage /> },
-      { path: 'documents/:id/workspace', element: <DocumentWorkspacePage /> },
-      { path: 'documents/:id/preview-release', element: <DocumentPreviewReleasePage /> },
+      { path: 'documents/intake', element: guard('documentIntake', <DocumentRequestIntakePage />) },
+      { path: 'documents/queue', element: guard('documentQueue', <DocumentQueuePage />) },
+      { path: 'documents/templates', element: guard('documentTemplates', <DocumentTemplateManagerPage />) },
+      { path: 'documents/verification', element: guard('documentVerification', <DocumentVerificationPage />) },
+      { path: 'documents/:id/workspace', element: guard('documentWorkspace', <DocumentWorkspacePage />) },
+      { path: 'documents/:id/preview-release', element: guard('documentPreviewRelease', <DocumentPreviewReleasePage />) },
 
       // Collections
-      { path: 'collections/reference-log', element: <CollectionReferenceLogPage /> },
-      { path: 'collections/daily-certification', element: <DailyCollectionCertificationPage /> },
-      { path: 'collections/fees-exemptions', element: <FeeTableExemptionPage /> },
+      { path: 'collections/reference-log', element: guard('collectionReferenceLog', <CollectionReferenceLogPage />) },
+      { path: 'collections/daily-certification', element: guard('collectionDailyCertification', <DailyCollectionCertificationPage />) },
+      { path: 'collections/fees-exemptions', element: guard('collectionFeesExemptions', <FeeTableExemptionPage />) },
 
       // Blotter & KP
-      { path: 'blotter', element: <BlotterRegistryPage /> },
-      { path: 'blotter/intake', element: <BlotterIntakePage /> },
-      { path: 'kp-cases', element: <KPCaseTrackerPage /> },
-      { path: 'kp/notices-schedule', element: <KPNoticesSchedulePage /> },
-      { path: 'kp/minutes-settlement', element: <KPMinutesSettlementPage /> },
+      { path: 'blotter', element: guard('blotterRegistry', <BlotterRegistryPage />) },
+      { path: 'blotter/intake', element: guard('blotterIntake', <BlotterIntakePage />) },
+      { path: 'kp-cases', element: guard('kpCases', <KPCaseTrackerPage />) },
+      { path: 'kp/notices-schedule', element: guard('kpNoticesSchedule', <KPNoticesSchedulePage />) },
+      { path: 'kp/minutes-settlement', element: guard('kpMinutesSettlement', <KPMinutesSettlementPage />) },
 
       // DRRM
-      { path: 'drrm', element: <DRRMDashboardPage /> },
-      { path: 'drrm/early-warning', element: <EarlyWarningPreparednessPage /> },
-      { path: 'drrm/sitrep', element: <SitRepBuilderPage /> },
-      { path: 'drrm/dana', element: <DANAFormPage /> },
-      { path: 'drrm/evacuation-dromic', element: <EvacuationDromicPage /> },
-      { path: 'drrm/hazard-risk', element: <HazardRiskRegisterPage /> },
-      { path: 'drrm/resources', element: <DRRMResourcesPage /> },
-      { path: 'drrm/relief-distribution', element: <ReliefDistributionPage /> },
-      { path: 'drrm/actions', element: <BDRRMCActionTrackerPage /> },
+      { path: 'drrm', element: guard('drrmDashboard', <DRRMDashboardPage />) },
+      { path: 'drrm/early-warning', element: guard('drrmEarlyWarning', <EarlyWarningPreparednessPage />) },
+      { path: 'drrm/sitrep', element: guard('drrmSitrep', <SitRepBuilderPage />) },
+      { path: 'drrm/dana', element: guard('drrmDana', <DANAFormPage />) },
+      { path: 'drrm/evacuation-dromic', element: guard('drrmEvacuationDromic', <EvacuationDromicPage />) },
+      { path: 'drrm/hazard-risk', element: guard('drrmHazardRisk', <HazardRiskRegisterPage />) },
+      { path: 'drrm/resources', element: guard('drrmResources', <DRRMResourcesPage />) },
+      { path: 'drrm/relief-distribution', element: guard('drrmReliefDistribution', <ReliefDistributionPage />) },
+      { path: 'drrm/actions', element: guard('drrmActions', <BDRRMCActionTrackerPage />) },
 
       // GAD
-      { path: 'gad', element: <GADDashboardPage /> },
-      { path: 'gad/annex-d1', element: <AnnexD1WorkspacePage /> },
-      { path: 'gad/annex-e1', element: <AnnexE1WorkspacePage /> },
-      { path: 'gad/activity-monitor', element: <GADActivityMonitorPage /> },
-      { path: 'gad/participants', element: <ParticipantLogPage /> },
-      { path: 'gad/budget-attribution', element: <GADBudgetAttributionPage /> },
+      { path: 'gad', element: guard('gadDashboard', <GADDashboardPage />) },
+      { path: 'gad/annex-d1', element: guard('gadAnnexD1', <AnnexD1WorkspacePage />) },
+      { path: 'gad/annex-e1', element: guard('gadAnnexE1', <AnnexE1WorkspacePage />) },
+      { path: 'gad/activity-monitor', element: guard('gadActivityMonitor', <GADActivityMonitorPage />) },
+      { path: 'gad/participants', element: guard('gadParticipants', <ParticipantLogPage />) },
+      { path: 'gad/budget-attribution', element: guard('gadBudgetAttribution', <GADBudgetAttributionPage />) },
 
       // Reports & Review
-      { path: 'reports', element: <ReportsExportCenterPage /> },
-      { path: 'review/municipal-city', element: <MunicipalReviewDashboardPage /> },
-      { path: 'review/comments', element: <ReviewerCommentLoopPage /> },
-      { path: 'compliance/sglgb', element: <ComplianceChecklistPage /> },
-      { path: 'data-quality', element: <DataQualityDashboardPage /> },
+      { path: 'reports', element: guard('reports', <ReportsExportCenterPage />) },
+      { path: 'review/municipal-city', element: guard('municipalReview', <MunicipalReviewDashboardPage />) },
+      { path: 'review/comments', element: guard('reviewComments', <ReviewerCommentLoopPage />) },
+      { path: 'compliance/sglgb', element: guard('complianceSglgb', <ComplianceChecklistPage />) },
+      { path: 'data-quality', element: guard('dataQuality', <DataQualityDashboardPage />) },
 
       // Admin
-      { path: 'admin/users-roles', element: <UserRoleAdminPage /> },
-      { path: 'admin/audit', element: <AuditTrailViewerPage /> },
-      { path: 'admin/backup-sync', element: <BackupSyncMonitorPage /> },
-      { path: 'admin/settings', element: <SettingsPage /> },
+      { path: 'admin/users-roles', element: guard('adminUsersRoles', <UserRoleAdminPage />) },
+      { path: 'admin/audit', element: guard('adminAudit', <AuditTrailViewerPage />) },
+      { path: 'admin/backup-sync', element: guard('adminBackupSync', <BackupSyncMonitorPage />) },
+      { path: 'admin/settings', element: guard('adminSettings', <SettingsPage />) },
 
       // Roadmap
-      { path: 'roadmap', element: <FutureModulesPage /> },
+      { path: 'roadmap', element: guard('roadmap', <FutureModulesPage />) },
       // Individual roadmap placeholders redirect to main roadmap
-      { path: 'roadmap/*', element: <FutureModulesPage /> },
+      { path: 'roadmap/*', element: guard('roadmap', <FutureModulesPage />) },
 
       // Attachments (placeholder)
-      { path: 'attachments', element: <Navigate to="/residents" replace /> },
+      { path: 'attachments', element: guard('attachments', <Navigate to="/residents" replace />) },
     ],
   },
 

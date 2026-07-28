@@ -1,7 +1,7 @@
 import type { Role, RoleId } from '@/types/auth';
 
 export const ROLES: Role[] = [
-  { id: 'system_admin', label: 'System Administrator', shortLabel: 'Sys Admin', description: 'Full system administration, user/role management, audit, backup and sync monitoring.', color: 'bg-slate-700', icon: 'Shield' },
+  { id: 'system_admin', label: 'System Administrator', shortLabel: 'Sys Admin', description: 'Technical platform administration, user/role management, audit, backup and sync monitoring.', color: 'bg-slate-700', icon: 'Shield' },
   { id: 'punong_barangay', label: 'Punong Barangay', shortLabel: 'Punong Barangay', description: 'Executive dashboard, approvals, DRRM/GAD review, document signing simulation.', color: 'bg-forest', icon: 'Star' },
   { id: 'barangay_secretary', label: 'Barangay Secretary', shortLabel: 'Secretary', description: 'Residents, households, documents, blotter, KP, reports, and routine operations.', color: 'bg-ocean', icon: 'FileText' },
   { id: 'barangay_treasurer', label: 'Barangay Treasurer', shortLabel: 'Treasurer', description: 'Collection reference log, fee table, daily certification, and related document view.', color: 'bg-mountain', icon: 'Wallet' },

@@ -4,11 +4,13 @@ import type { Household } from '@/types/household';
 import type { DocumentRequest } from '@/types/document';
 import type { CollectionRecord } from '@/types/collection';
 import type { BlotterIncident, KPCase } from '@/types/blotter';
+import type { DANARecord, EvacuationRecord, SitRep } from '@/types/drrm';
 import { mockResidents } from '@/data/mockResidents';
 import { mockHouseholds } from '@/data/mockHouseholds';
 import { mockDocumentRequests } from '@/data/mockDocuments';
 import { mockCollectionRecords } from '@/data/mockCollections';
 import { mockBlotterIncidents, mockKPCases } from '@/data/mockBlotterKP';
+import { mockDANARecords, mockEvacuationRecords, mockSitReps } from '@/data/mockDRRM';
 
 interface MockDataContextValue {
   residents: Resident[];
@@ -23,6 +25,12 @@ interface MockDataContextValue {
   setBlotterIncidents: React.Dispatch<React.SetStateAction<BlotterIncident[]>>;
   kpCases: KPCase[];
   setKPCases: React.Dispatch<React.SetStateAction<KPCase[]>>;
+  sitReps: SitRep[];
+  setSitReps: React.Dispatch<React.SetStateAction<SitRep[]>>;
+  danaRecords: DANARecord[];
+  setDANARecords: React.Dispatch<React.SetStateAction<DANARecord[]>>;
+  evacuationRecords: EvacuationRecord[];
+  setEvacuationRecords: React.Dispatch<React.SetStateAction<EvacuationRecord[]>>;
   toasts: Toast[];
   showToast: (msg: string, type?: Toast['type']) => void;
 }
@@ -42,6 +50,9 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
   const [collectionRecords, setCollectionRecords] = useState<CollectionRecord[]>(mockCollectionRecords);
   const [blotterIncidents, setBlotterIncidents] = useState<BlotterIncident[]>(mockBlotterIncidents);
   const [kpCases, setKPCases] = useState<KPCase[]>(mockKPCases);
+  const [sitReps, setSitReps] = useState<SitRep[]>(mockSitReps);
+  const [danaRecords, setDANARecords] = useState<DANARecord[]>(mockDANARecords);
+  const [evacuationRecords, setEvacuationRecords] = useState<EvacuationRecord[]>(mockEvacuationRecords);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   function showToast(message: string, type: Toast['type'] = 'success') {
@@ -60,6 +71,9 @@ export function MockDataProvider({ children }: { children: ReactNode }) {
       collectionRecords, setCollectionRecords,
       blotterIncidents, setBlotterIncidents,
       kpCases, setKPCases,
+      sitReps, setSitReps,
+      danaRecords, setDANARecords,
+      evacuationRecords, setEvacuationRecords,
       toasts, showToast,
     }}>
       {children}
