@@ -8,12 +8,12 @@ Route::get('/health', static fn (): array => [
     'api_version' => 'v1',
 ])->name('health');
 
-$administrationPublicRoutes = base_path(
-    config('modules.domains.administration-security.path').'/routes/public.php'
-);
+foreach (config('modules.domains', []) as $module) {
+    $publicRouteFile = base_path($module['path'].'/routes/public.php');
 
-if (is_file($administrationPublicRoutes)) {
-    Route::middleware('web')->group($administrationPublicRoutes);
+    if (is_file($publicRouteFile)) {
+        Route::middleware('web')->group($publicRouteFile);
+    }
 }
 
 Route::middleware(['web', 'auth'])->group(function (): void {

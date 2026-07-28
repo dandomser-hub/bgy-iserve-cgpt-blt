@@ -32,6 +32,14 @@ const requiredFiles = [
   'app/Modules/ResidentHousehold/Services/DuplicateCandidateDetector.php',
   'app/Modules/ResidentHousehold/routes/api.php',
   'tests/Feature/ResidentHouseholdMasterDataTest.php',
+  'config/document_services.php',
+  'app/Modules/DocumentServices/Models/DocumentRequest.php',
+  'app/Modules/DocumentServices/Models/DocumentTemplateVersion.php',
+  'app/Modules/DocumentServices/Services/DocumentWorkflow.php',
+  'app/Modules/DocumentServices/Services/PrivatePdfGenerator.php',
+  'app/Modules/DocumentServices/routes/api.php',
+  'app/Modules/DocumentServices/routes/public.php',
+  'tests/Feature/DocumentServiceWorkflowTest.php',
 ];
 
 const moduleDirectories = [
@@ -120,6 +128,12 @@ for (const requiredControl of [
   "'resident.status.manage'",
   "'resident.duplicate.review'",
   "'resident.privacy.record'",
+  "'document.template.manage'",
+  "'document.requirements.check'",
+  "'document.fee.reference'",
+  "'document.release'",
+  "'document.reprint'",
+  "'document.void'",
 ]) {
   if (!authorization.includes(requiredControl)) {
     failures.push(`Authorization matrix is missing: ${requiredControl}`);
@@ -167,11 +181,52 @@ if (env.includes('SESSION_ENCRYPT=false')) {
   failures.push('Session encryption must not be disabled by the environment baseline.');
 }
 
+const documentRoutes = await readFile(
+  `${root}/app/Modules/DocumentServices/routes/api.php`,
+  'utf8',
+);
+for (const requiredRouteControl of [
+  "middleware('permission:document.template.manage')",
+  "middleware('permission:document.create')",
+  "middleware('permission:document.requirements.check')",
+  "middleware('permission:document.fee.reference')",
+  "middleware('permission:document.approve')",
+  "middleware('permission:document.export')",
+  "middleware('permission:document.release')",
+  "middleware('permission:document.reprint')",
+  "middleware('permission:document.void')",
+]) {
+  if (!documentRoutes.includes(requiredRouteControl)) {
+    failures.push(`Document-service routes are missing control: ${requiredRouteControl}`);
+  }
+}
+
+const documentMigration = await readFile(
+  `${root}/app/Modules/DocumentServices/database/migrations/2026_07_28_000003_create_document_service_tables.php`,
+  'utf8',
+);
+for (const requiredTable of [
+  "'document_templates'",
+  "'document_template_versions'",
+  "'document_requests'",
+  "'document_workflow_events'",
+  "'issued_documents'",
+  "'document_release_logs'",
+]) {
+  if (!documentMigration.includes(`Schema::create(${requiredTable}`)) {
+    failures.push(`Document-service migration is missing table: ${requiredTable}`);
+  }
+}
+
 const systemAdministrator = authorization.match(
   /'system_administrator'\s*=>\s*\[(.*?)\n\s*\],/s,
 )?.[1] ?? '';
 for (const forbiddenApproval of [
   "'document.approve'",
+  "'document.export'",
+  "'document.release'",
+  "'document.reprint'",
+  "'document.void'",
   "'collection.certify'",
   "'case.approve'",
   "'drrm.approve'",
