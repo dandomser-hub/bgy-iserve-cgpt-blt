@@ -1,0 +1,39 @@
+name: Prototype quality
+
+on:
+  pull_request:
+    branches: [mod-01]
+  push:
+    branches: [mod-01]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Check quality contracts
+        run: npm run contract:check
+
+      - name: Type-check and build
+        run: npm run build
+
+      - name: Enforce bundle budget
+        run: npm run bundle:check
